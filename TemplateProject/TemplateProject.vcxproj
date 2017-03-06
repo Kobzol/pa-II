@@ -19,21 +19,80 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="boids\boids.cu" />
     <CudaCompile Include="cudautil.cu" />
     <CudaCompile Include="cviko_1.cu" />
     <CudaCompile Include="cviko_2.cu" />
     <CudaCompile Include="cviko_3.cu" />
+    <CudaCompile Include="cviko_4.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="boids\boids.h" />
     <ClInclude Include="cudamem.h" />
     <ClInclude Include="cudautil.cuh" />
-    <ClInclude Include="graphics\glutil.h" />
-    <ClInclude Include="graphics\opengl.h" />
+    <ClInclude Include="opengl\code\tetrahedra\TetrahedraEntity.h" />
+    <ClInclude Include="opengl\code\tetrahedra\TetrahedraVAO.h" />
+    <ClInclude Include="opengl\code\uniform.h" />
+    <ClInclude Include="opengl\code\util.h" />
+    <ClInclude Include="opengl\CoreHeaders\boundingBox.h" />
+    <ClInclude Include="opengl\CoreHeaders\bufferObject.h" />
+    <ClInclude Include="opengl\CoreHeaders\camera.h" />
+    <ClInclude Include="opengl\CoreHeaders\eai.h" />
+    <ClInclude Include="opengl\CoreHeaders\entity.h" />
+    <ClInclude Include="opengl\CoreHeaders\entity_Cube_Simple.h" />
+    <ClInclude Include="opengl\CoreHeaders\entity_Cube_V3C4N3.h" />
+    <ClInclude Include="opengl\CoreHeaders\entity_GridXY.h" />
+    <ClInclude Include="opengl\CoreHeaders\entity_OBJ.h" />
+    <ClInclude Include="opengl\CoreHeaders\entity_SceneOrigin.h" />
+    <ClInclude Include="opengl\CoreHeaders\entity_VAO.h" />
+    <ClInclude Include="opengl\CoreHeaders\fbo.h" />
+    <ClInclude Include="opengl\CoreHeaders\font.h" />
+    <ClInclude Include="opengl\CoreHeaders\generalLoader.h" />
+    <ClInclude Include="opengl\CoreHeaders\guiManager.h" />
+    <ClInclude Include="opengl\CoreHeaders\helper.h" />
+    <ClInclude Include="opengl\CoreHeaders\imageManager.h" />
+    <ClInclude Include="opengl\CoreHeaders\light.h" />
+    <ClInclude Include="opengl\CoreHeaders\material.h" />
+    <ClInclude Include="opengl\CoreHeaders\model.h" />
+    <ClInclude Include="opengl\CoreHeaders\modelPart.h" />
+    <ClInclude Include="opengl\CoreHeaders\objLoader.h" />
+    <ClInclude Include="opengl\CoreHeaders\pbo.h" />
+    <ClInclude Include="opengl\CoreHeaders\sceneData.h" />
+    <ClInclude Include="opengl\CoreHeaders\sceneGUI.h" />
+    <ClInclude Include="opengl\CoreHeaders\sceneInitializer.h" />
+    <ClInclude Include="opengl\CoreHeaders\sceneSetting.h" />
+    <ClInclude Include="opengl\CoreHeaders\shader.h" />
+    <ClInclude Include="opengl\CoreHeaders\shaderProgram.h" />
+    <ClInclude Include="opengl\CoreHeaders\ubo.h" />
+    <ClInclude Include="opengl\CoreHeaders\vao.h" />
+    <ClInclude Include="opengl\CoreHeaders\vao_CubeV3C4.h" />
+    <ClInclude Include="opengl\CoreHeaders\vao_CubeV3C4N3.h" />
+    <ClInclude Include="opengl\CoreHeaders\vao_GridXY.h" />
+    <ClInclude Include="opengl\CoreHeaders\vao_SceneOrigin.h" />
+    <ClInclude Include="opengl\CoreHeaders\vcDefs.h" />
+    <ClInclude Include="opengl\demos.h" />
+    <ClInclude Include="opengl\demos\demo2.h" />
+    <ClInclude Include="opengl\demos\demo3.h" />
+    <ClInclude Include="opengl\demos\demo4.h" />
+    <ClInclude Include="opengl\demos\demo5.h" />
+    <ClInclude Include="opengl\demos\demo_boids.h" />
+    <ClInclude Include="opengl\gl_util.h" />
+    <ClInclude Include="opengl\mouse.h" />
+    <ClInclude Include="opengl\sceneManager.h" />
+    <ClInclude Include="opengl\stdafx.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="graphics\opengl.cpp" />
+    <ClCompile Include="opengl\code\uniform.cpp" />
+    <ClCompile Include="opengl\code\util.cpp" />
+    <ClCompile Include="opengl\demos\demo2.cpp" />
+    <ClCompile Include="opengl\demos\demo3.cpp" />
+    <ClCompile Include="opengl\demos\demo4.cpp" />
+    <ClCompile Include="opengl\demos\demo5.cpp" />
+    <ClCompile Include="opengl\demos\demo_boids.cpp" />
+    <ClCompile Include="opengl\mouse.cpp" />
+    <ClCompile Include="opengl\sceneManager.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AD6DD254-AD9D-4168-BF1F-CC32C8CEAD58}</ProjectGuid>
@@ -90,21 +149,21 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
-    <LibraryPath>$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc\freetype;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;C:\pg\Programovani\graphics\pg2\PG_II\common\Utils;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer\CoreHeaders;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer;$(GLM);$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
+    <LibraryPath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
-    <LibraryPath>$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc\freetype;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;C:\pg\Programovani\graphics\pg2\PG_II\common\Utils;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer\CoreHeaders;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer;$(GLM);$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
+    <LibraryPath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
-    <LibraryPath>$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc\freetype;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;C:\pg\Programovani\graphics\pg2\PG_II\common\Utils;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer\CoreHeaders;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer;$(GLM);$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
+    <LibraryPath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
-    <LibraryPath>$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc\freetype;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;C:\pg\Programovani\graphics\pg2\PG_II\common\Utils;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer\CoreHeaders;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer;$(GLM);$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
+    <LibraryPath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -124,7 +183,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
 copy "$(FREEIMAGE_BIN)\*.dll" "$(OutDir)"
 copy "$(GLEW_BIN)\*.dll" "$(OutDir)"
 copy "$(FREEGLUT_BIN)\*.dll" "$(OutDir)"
-</Command>
+copy "$(PTHREAD)\*.dll" "$(OutDir)"
+copy "$(ANTTWEAKBAR_BIN)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
@@ -141,7 +201,7 @@ copy "$(FREEGLUT_BIN)\*.dll" "$(OutDir)"
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>cudart.lib;freeglut.lib;glew64.lib;freeimage64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart.lib;freeglut.lib;freeimage64.lib;pthreadVC2.lib;freetype271.lib;glew64.lib;AntTweakBar64.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
@@ -149,7 +209,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
 copy "$(FREEIMAGE_BIN)\*.dll" "$(OutDir)"
 copy "$(GLEW_BIN)\*.dll" "$(OutDir)"
 copy "$(FREEGLUT_BIN)\*.dll" "$(OutDir)"
-</Command>
+copy "$(PTHREAD)\*.dll" "$(OutDir)"
+copy "$(ANTTWEAKBAR_BIN)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
@@ -178,7 +239,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
 copy "$(FREEIMAGE_BIN)\*.dll" "$(OutDir)"
 copy "$(GLEW_BIN)\*.dll" "$(OutDir)"
 copy "$(FREEGLUT_BIN)\*.dll" "$(OutDir)"
-</Command>
+copy "$(PTHREAD)\*.dll" "$(OutDir)"
+copy "$(ANTTWEAKBAR_BIN)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>
@@ -199,7 +261,7 @@ copy "$(FREEGLUT_BIN)\*.dll" "$(OutDir)"
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>cudart.lib;freeglut.lib;glew64.lib;freeimage64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart.lib;freeglut.lib;freeimage64.lib;pthreadVC2.lib;freetype271.lib;glew64.lib;AntTweakBar64.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
@@ -207,7 +269,8 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
 copy "$(FREEIMAGE_BIN)\*.dll" "$(OutDir)"
 copy "$(GLEW_BIN)\*.dll" "$(OutDir)"
 copy "$(FREEGLUT_BIN)\*.dll" "$(OutDir)"
-</Command>
+copy "$(PTHREAD)\*.dll" "$(OutDir)"
+copy "$(ANTTWEAKBAR_BIN)\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <CodeGeneration>compute_30,sm_30</CodeGeneration>

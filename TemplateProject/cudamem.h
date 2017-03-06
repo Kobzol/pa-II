@@ -2,8 +2,7 @@
 
 #include <iostream>
 #include <cassert>
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
+#include "cudautil.cuh"
 
 static void checkCudaCall(cudaError_t error, const char* file, int line)
 {
@@ -164,4 +163,25 @@ private:
 	T* hostPointer;
 	T* devicePointer;
 	size_t count;
+};
+
+/*
+* Represents constant CUDA memory.
+*/
+template <typename T>
+class CudaConstant
+{
+public:
+	static void toDevice(const T& symbol, const T& source, size_t size = 1)
+	{
+		CHECK_CUDA_CALL(cudaMemcpyToSymbol(symbol, &source, size * sizeof(T)));
+	}
+	static void toDevice(const T& symbol, const T* source, size_t size = 1)
+	{
+		CHECK_CUDA_CALL(cudaMemcpyToSymbol(symbol, source, size * sizeof(T)));
+	}
+	static void fromDevice(const T& symbol, T* dest, size_t size = 1)
+	{
+		CHECK_CUDA_CALL(cudaMemcpyFromSymbol(dest, symbol, size * sizeof(T)));
+	}
 };

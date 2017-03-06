@@ -7,6 +7,10 @@
 
 #include "cudamem.h"
 
+#ifdef __INTELLISENSE__
+	void __syncthreads();
+#endif
+
 #define CUDA_METHOD __device__ __host__
 
 __device__ int getGlobalIdx_1D_1D();
@@ -57,6 +61,11 @@ public:
 		float time;
 		cudaEventElapsedTime(&time, this->startEvent, this->stopEvent);
 		return time;
+	}
+
+	void print(const std::string& message)
+	{
+		std::cerr << message << this->get_time() << " ms" << std::endl;
 	}
 
 private:

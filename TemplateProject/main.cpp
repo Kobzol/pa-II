@@ -3,11 +3,12 @@
 #include <iostream>
 #include <string>
 
-#include "graphics/opengl.h"
+#include "boids/boids.h"
 
 void cviko1();
 void cviko2();
 void cviko3();
+void cviko4();
 
 cudaDeviceProp deviceProp;
 
@@ -15,7 +16,7 @@ int main(int argc, char *argv[])
 {
 	initializeCUDA(deviceProp);
 
-	cviko3();
+	boids(argc, argv);
 
 	getchar();
 
