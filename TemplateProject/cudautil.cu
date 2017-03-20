@@ -1,5 +1,17 @@
 #include "cudautil.cuh"
 
+#include <cassert>
+
+void checkCudaCall(cudaError_t error, const char* expression, const char* file, int line)
+{
+	if (error)
+	{
+		std::cout << "CUDA error at " << file << ":" << line << " - " << expression << std::endl;
+		std::cout << cudaGetErrorName(error) << " :: " << cudaGetErrorString(error) << std::endl;
+		assert(0);
+	}
+}
+
 __device__ int getGlobalIdx_1D_1D()
 {
 	return blockIdx.x *blockDim.x + threadIdx.x;

@@ -2,6 +2,8 @@
 #include <memory>
 
 #include "cudautil.cuh"
+#include "cudamem.h"
+
 
 static __global__ void fillMatrix(int* __restrict__ matrix, const int pitch, const int width, const int height)
 {

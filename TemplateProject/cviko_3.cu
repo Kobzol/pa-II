@@ -3,6 +3,8 @@
 #include <ctime>
 
 #include "cudautil.cuh"
+#include "cudamem.h"
+
 
 #define TPB_REDUCE 128
 #define TPB_APPLY 256

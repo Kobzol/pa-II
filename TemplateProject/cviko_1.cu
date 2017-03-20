@@ -1,6 +1,8 @@
 #include <vector>
 
 #include "cudautil.cuh"
+#include "cudamem.h"
+
 
 #define TPB (128)
 

@@ -25,6 +25,8 @@
     <CudaCompile Include="cviko_2.cu" />
     <CudaCompile Include="cviko_3.cu" />
     <CudaCompile Include="cviko_4.cu" />
+    <CudaCompile Include="textures\cviko_5.cu" />
+    <CudaCompile Include="textures\cviko_6.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="boids\boids.h" />
@@ -80,6 +82,7 @@
     <ClInclude Include="opengl\mouse.h" />
     <ClInclude Include="opengl\sceneManager.h" />
     <ClInclude Include="opengl\stdafx.h" />
+    <ClInclude Include="textures\imageKernels.cuh" />
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>

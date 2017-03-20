@@ -1,11 +1,15 @@
 #pragma once
 
+#include <iostream>
+#include <string>
+
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
 #include <cudaDefs.h>
 
-#include "cudamem.h"
+void checkCudaCall(cudaError_t error, const char* expression, const char* file, int line);
+#define CHECK_CUDA_CALL(err) (checkCudaCall(err, #err, __FILE__, __LINE__))
 
 #ifdef __INTELLISENSE__
 	void __syncthreads();
@@ -23,8 +27,8 @@ class CudaTimer
 public:
 	CudaTimer(bool automatic = false) : automatic(automatic)
 	{
-		cudaEventCreate(&this->startEvent);
-		cudaEventCreate(&this->stopEvent);
+		CHECK_CUDA_CALL(cudaEventCreate(&this->startEvent));
+		CHECK_CUDA_CALL(cudaEventCreate(&this->stopEvent));
 
 		if (automatic)
 		{
@@ -39,8 +43,8 @@ public:
 			std::cerr << this->get_time() << std::endl;
 		}
 
-		cudaEventDestroy(this->startEvent);
-		cudaEventDestroy(this->stopEvent);
+		CHECK_CUDA_CALL(cudaEventDestroy(this->startEvent));
+		CHECK_CUDA_CALL(cudaEventDestroy(this->stopEvent));
 	}
 
 	CudaTimer(const CudaTimer& other) = delete;
@@ -49,17 +53,17 @@ public:
 
 	void start() const
 	{
-		cudaEventRecord(this->startEvent);
+		CHECK_CUDA_CALL(cudaEventRecord(this->startEvent));
 	}
 	void stop_wait() const
 	{
-		cudaEventRecord(this->stopEvent);
-		cudaEventSynchronize(this->stopEvent);
+		CHECK_CUDA_CALL(cudaEventRecord(this->stopEvent));
+		CHECK_CUDA_CALL(cudaEventSynchronize(this->stopEvent));
 	}
 	float get_time() const
 	{
 		float time;
-		cudaEventElapsedTime(&time, this->startEvent, this->stopEvent);
+		CHECK_CUDA_CALL(cudaEventElapsedTime(&time, this->startEvent, this->stopEvent));
 		return time;
 	}
 
