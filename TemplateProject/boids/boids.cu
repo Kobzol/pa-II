@@ -102,7 +102,8 @@ void boids(int argc, char** argv)
 
 #ifdef VISUALIZE
 	SceneManager* sceneManager = SceneManager::GetInstance();
-	sceneManager->Init(argc, argv, new DemoBoids(sceneManager->m_sceneData, BOID_COUNT));
+	DemoBoids* demo = new DemoBoids(sceneManager->m_sceneData, BOID_COUNT);
+	sceneManager->Init(argc, argv, demo);
 #endif
 
 	while (true)

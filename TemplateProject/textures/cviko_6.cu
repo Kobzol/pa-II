@@ -21,10 +21,9 @@ static cudaChannelFormatDesc srcTexCFD;
 static size_t srcTexPitch;
 static float* dSrcTexData = nullptr;
 
-cudaTextureObject_t textureObj;
-cudaResourceDesc textureResDesc;
-cudaTextureDesc textureDesc;
-cudaResourceViewDesc textureViewDesc;
+static cudaTextureObject_t textureObj;
+static cudaResourceDesc textureResDesc;
+static cudaTextureDesc textureDesc;
 
 static size_t dstTexPitch;
 static uchar3* dstTexData = nullptr;

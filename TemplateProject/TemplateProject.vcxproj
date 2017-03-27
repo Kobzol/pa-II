@@ -25,6 +25,7 @@
     <CudaCompile Include="cviko_2.cu" />
     <CudaCompile Include="cviko_3.cu" />
     <CudaCompile Include="cviko_4.cu" />
+    <CudaCompile Include="graphics\cviko_7.cu" />
     <CudaCompile Include="textures\cviko_5.cu" />
     <CudaCompile Include="textures\cviko_6.cu" />
   </ItemGroup>
@@ -32,6 +33,8 @@
     <ClInclude Include="boids\boids.h" />
     <ClInclude Include="cudamem.h" />
     <ClInclude Include="cudautil.cuh" />
+    <ClInclude Include="graphics\imageKernels.cuh" />
+    <ClInclude Include="opengl\code\entity_boid.h" />
     <ClInclude Include="opengl\code\tetrahedra\TetrahedraEntity.h" />
     <ClInclude Include="opengl\code\tetrahedra\TetrahedraVAO.h" />
     <ClInclude Include="opengl\code\uniform.h" />
@@ -67,16 +70,13 @@
     <ClInclude Include="opengl\CoreHeaders\shaderProgram.h" />
     <ClInclude Include="opengl\CoreHeaders\ubo.h" />
     <ClInclude Include="opengl\CoreHeaders\vao.h" />
+    <ClInclude Include="opengl\code\vao_boid.h" />
     <ClInclude Include="opengl\CoreHeaders\vao_CubeV3C4.h" />
     <ClInclude Include="opengl\CoreHeaders\vao_CubeV3C4N3.h" />
     <ClInclude Include="opengl\CoreHeaders\vao_GridXY.h" />
     <ClInclude Include="opengl\CoreHeaders\vao_SceneOrigin.h" />
     <ClInclude Include="opengl\CoreHeaders\vcDefs.h" />
     <ClInclude Include="opengl\demos.h" />
-    <ClInclude Include="opengl\demos\demo2.h" />
-    <ClInclude Include="opengl\demos\demo3.h" />
-    <ClInclude Include="opengl\demos\demo4.h" />
-    <ClInclude Include="opengl\demos\demo5.h" />
     <ClInclude Include="opengl\demos\demo_boids.h" />
     <ClInclude Include="opengl\gl_util.h" />
     <ClInclude Include="opengl\mouse.h" />
@@ -89,13 +89,15 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="opengl\code\uniform.cpp" />
     <ClCompile Include="opengl\code\util.cpp" />
-    <ClCompile Include="opengl\demos\demo2.cpp" />
-    <ClCompile Include="opengl\demos\demo3.cpp" />
-    <ClCompile Include="opengl\demos\demo4.cpp" />
-    <ClCompile Include="opengl\demos\demo5.cpp" />
     <ClCompile Include="opengl\demos\demo_boids.cpp" />
     <ClCompile Include="opengl\mouse.cpp" />
     <ClCompile Include="opengl\sceneManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="opengl\Resources\shaders\boids.frag" />
+    <None Include="opengl\Resources\shaders\boids.vert" />
+    <None Include="opengl\Resources\shaders\screen_v3_t2.frag" />
+    <None Include="opengl\Resources\shaders\screen_v3_t2.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AD6DD254-AD9D-4168-BF1F-CC32C8CEAD58}</ProjectGuid>

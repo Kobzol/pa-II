@@ -11,6 +11,7 @@ void cviko3();
 void cviko4();
 void cviko5();
 void cviko6();
+void cviko7(int argc, char** argv);
 
 cudaDeviceProp deviceProp;
 
@@ -18,7 +19,7 @@ int main(int argc, char *argv[])
 {
 	initializeCUDA(deviceProp);
 
-	cviko6();
+	cviko7(argc, argv);
 
 	getchar();
 
