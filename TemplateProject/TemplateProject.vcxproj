@@ -154,21 +154,21 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc\freetype;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;C:\pg\Programovani\graphics\pg2\PG_II\common\Utils;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer\CoreHeaders;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer;$(GLM);$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
-    <LibraryPath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\common\pthread;..\..\common\FreeType\inc\freetype;..\..\common\FreeType\inc;..\..\common\AntTweakBar\inc;opengl;opengl\CoreHeaders;$(GLM);$(COMMON);$(UTILS);$(CUDA_SDK_INC);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\common\FreeType\lib\x64;..\..\common\AntTweakBar\lib\x64;..\..\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc\freetype;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;C:\pg\Programovani\graphics\pg2\PG_II\common\Utils;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer\CoreHeaders;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer;$(GLM);$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
-    <LibraryPath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\common\pthread;..\..\common\FreeType\inc\freetype;..\..\common\FreeType\inc;..\..\common\AntTweakBar\inc;opengl;opengl\CoreHeaders;$(GLM);$(COMMON);$(UTILS);$(CUDA_SDK_INC);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\common\FreeType\lib\x64;..\..\common\AntTweakBar\lib\x64;..\..\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc\freetype;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;C:\pg\Programovani\graphics\pg2\PG_II\common\Utils;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer\CoreHeaders;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer;$(GLM);$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
-    <LibraryPath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\common\pthread;..\..\common\FreeType\inc\freetype;..\..\common\FreeType\inc;..\..\common\AntTweakBar\inc;opengl;opengl\CoreHeaders;$(GLM);$(COMMON);$(UTILS);$(CUDA_SDK_INC);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\common\FreeType\lib\x64;..\..\common\AntTweakBar\lib\x64;..\..\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\inc\freetype;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\inc;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;C:\pg\Programovani\graphics\pg2\PG_II\common\Utils;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer\CoreHeaders;C:\pg\Programovani\graphics\pg2\PG_II\TutorialsVSB\Viewer;$(GLM);$(COMMON);$(CUDA_SDK_INC);$(UTILS);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
-    <LibraryPath>C:\pg\Programovani\graphics\pg2\PG_II\common\FreeType\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\AntTweakBar\lib\x64;C:\pg\Programovani\graphics\pg2\PG_II\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
+    <IncludePath>..\..\common\pthread;..\..\common\FreeType\inc\freetype;..\..\common\FreeType\inc;..\..\common\AntTweakBar\inc;opengl;opengl\CoreHeaders;$(GLM);$(COMMON);$(UTILS);$(CUDA_SDK_INC);$(FREEIMAGE_INC);$(GLEW_INC);$(FREEGLUT_INC);$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\common\FreeType\lib\x64;..\..\common\AntTweakBar\lib\x64;..\..\common\pthread;$(FREEIMAGE_LIB);$(GLEW_LIB);$(FREEGLUT_LIB);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

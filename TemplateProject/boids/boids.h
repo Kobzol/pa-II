@@ -1,8 +1,6 @@
 #pragma once
 
-#define BOID_COUNT (100)
-#define TPB (128)
-
-#define VISUALIZE
+// TODO: align boids to block size
+// TODO: unroll boid loop/make block size 32 and remove sync
 
 void boids(int argc, char** argv);

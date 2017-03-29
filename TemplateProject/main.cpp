@@ -19,9 +19,9 @@ int main(int argc, char *argv[])
 {
 	initializeCUDA(deviceProp);
 
-	cviko7(argc, argv);
+	boids(argc, argv);
 
-	getchar();
+	//getchar();
 
 	return 0;
 }

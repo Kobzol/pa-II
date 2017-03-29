@@ -20,11 +20,11 @@ public:
 			this->store(*mem, count);
 		}
 	}
-	CudaMemory(size_t count, T value) : count(count)
+	/*CudaMemory(size_t count, T value) : count(count)
 	{
 		CHECK_CUDA_CALL(cudaMalloc(&this->devicePointer, sizeof(T) * count));
 		CHECK_CUDA_CALL(cudaMemset(this->devicePointer, value, sizeof(T) * count));
-	}
+	}*/
 	~CudaMemory()
 	{
 		CHECK_CUDA_CALL(cudaFree(this->devicePointer));
