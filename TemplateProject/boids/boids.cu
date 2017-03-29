@@ -14,7 +14,9 @@
 #include <cuda_gl_interop.h>
 
 #define BOID_COUNT (50)
-#define TPB (BOID_COUNT)
+#define TPB (128)
+
+#define USE_SHARED_MEM
 #define VISUALIZE
 
 
@@ -123,58 +125,50 @@ static __device__ float3 updateAlignment(float3 position, float3 otherPosition, 
 	count++;
 	return otherDirection;
 }
-/*
-static __device__ void updateFlock(Force& force, Boid* sharedBoids, const float3& position, const int tileSize)
+
+static __device__ void updateFlock(Force& force, const float3& position, const float3& otherPosition, const float3& otherDirection, FlockConfig* config)
 {
-	for (int i = 0; i < tileSize; i++)
-	{
-		force.separation += updateSeparation(position, sharedBoids[i].position);
-		force.cohesion += updateCohesion(sharedBoids[i].position, force.cohesionCount);
-		force.alignment += updateAlignment(sharedBoids[i].direction, force.alignmentCount);
-	}
+	force.separation += updateSeparation(position, otherPosition, force.separationCount, config);
+	force.cohesion += updateCohesion(position, otherPosition, force.cohesionCount, config);
+	force.alignment += updateAlignment(position, otherPosition, otherDirection, force.alignmentCount, config);
 }
-*/
+
 static __global__ void updateDirections(Boid* __restrict__ boids, float3* __restrict__ outDirections, const int size, FlockConfig* config)
 {
 #pragma region Init
-	//__shared__ Boid sharedBoids[TPB];
+#ifdef USE_SHARED_MEM
+	__shared__ Boid sharedBoids[TPB];
+#endif
 
 	const int tileSize = blockDim.x;
 	const int tileCount = gridDim.x;
 	const int boidId = blockDim.x * blockIdx.x + threadIdx.x;
 
+#ifdef USE_SHARED_MEM
+	float3 position = boids[min(boidId, size - 1)].position;
+#else
 	if (boidId >= size) return;
 
-	float3 position = boids[/*min(boidId, size - 1)*/boidId].position;
+	float3 position = boids[boidId].position;
+#endif
+	
 	Force force = { 0 };
 
-	for (int i = 0; i < size; i++)
-	{
-		if (i != boidId)
-		{
-			force.separation += updateSeparation(position, boids[i].position, force.separationCount, config);
-			force.cohesion += updateCohesion(position, boids[i].position, force.cohesionCount, config);
-			force.alignment += updateAlignment(position, boids[i].position, boids[i].direction, force.alignmentCount, config);
-		}
-	}
-
-	/*int boidsLeft = size;
-#pragma endregion
-	
-#pragma region Traverse tiles
+#ifdef USE_SHARED_MEM
+	int boidsLeft = size;
 	for (int tile = 0; tile < tileCount - 1; tile++)
 	{
 		int tid = tile * tileSize + threadIdx.x;
 		sharedBoids[threadIdx.x] = boids[tid];
 		__syncthreads();
 
-		updateFlock(force, sharedBoids, position, tileSize);
+		for (int i = 0; i < tileSize; i++)
+		{
+			updateFlock(force, position, sharedBoids[i].position, sharedBoids[i].direction, config);
+		}
 		boidsLeft -= tileSize;
 		__syncthreads();
 	}
-#pragma endregion
-
-#pragma region Traverse last tile
 	int tid = (tileCount - 1) * tileSize + threadIdx.x;
 	if (tid < size)
 	{
@@ -182,9 +176,19 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 	}
 	__syncthreads();
 
-	updateFlock(force, sharedBoids, position, boidsLeft);
+	for (int i = 0; i < boidsLeft; i++)
+	{
+		updateFlock(force, position, sharedBoids[i].position, sharedBoids[i].direction, config);
+	}
 	__syncthreads();
-#pragma endregion*/
+
+	if (boidId >= size) return;
+#else
+	for (int i = 0; i < size; i++)
+	{
+		updateFlock(force, position, boids[i].position, boids[i].direction, config);
+	}
+#endif
 
 #pragma region  Create force vector
 	if (force.cohesionCount > 0)
@@ -254,7 +258,7 @@ static void copyTransformsToCuda(DemoBoids* demo, CudaMemory<Boid>& boids)
 
 void boids_body(int argc, char** argv)
 {
-	srand((unsigned int)time(nullptr));
+	srand((unsigned int) time(nullptr));
 
 #ifdef VISUALIZE
 	SceneManager* sceneManager = SceneManager::GetInstance();
@@ -292,16 +296,20 @@ void boids_body(int argc, char** argv)
 		timer.start();
 		updateDirections << <gridDim, blockDim >> > (cudaBoids.device(), outDirectionsCuda.device(), BOID_COUNT, flockConfigCuda.device());
 		timer.stop_wait();
-		//timer.print("Update directions: ");
+#ifndef VISUALIZE
+		timer.print("Update directions: ");
+#endif
 
 		timer.start();
 		updatePositions << <gridDim, blockDim >> > (cudaBoids.device(), outDirectionsCuda.device(), BOID_COUNT, flockConfigCuda.device());
 		timer.stop_wait();
-		//timer.print("Update positions: ");
-
-		copyTransformsToCuda(demo, cudaBoids);
+		
+#ifndef VISUALIZE
+		timer.print("Update positions: ");
+#endif
 
 #ifdef VISUALIZE
+		copyTransformsToCuda(demo, cudaBoids);
 		sceneManager->Refresh();
 		Sleep(5);
 #endif
