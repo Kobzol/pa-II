@@ -19,11 +19,12 @@
 
 #include <cuda_gl_interop.h>
 
-#define BOID_COUNT (10)
-#define TPB (128)
+#define BOID_COUNT (100)
+#define THREADS_PER_BLOCK (256)
 
 #define USE_SHARED_MEM
 #define VISUALIZE
+#define SIMULATE
 
 double boidsSeparationFactor = 1.0;
 double boidsCohesionFactor = 0.7;
@@ -153,7 +154,7 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 {
 #pragma region Init
 #ifdef USE_SHARED_MEM
-	__shared__ Boid sharedBoids[TPB];
+	__shared__ Boid sharedBoids[THREADS_PER_BLOCK];
 #endif
 
 	const int tileSize = blockDim.x;
@@ -240,11 +241,15 @@ static __global__ void updatePositions(Boid* boids, float3* directions, size_t s
 }
 
 /// C++
-static std::vector<Boid> init_boids(int count)
+static float getInitBoidRange()
+{
+	return log10(BOID_COUNT);
+}
+static std::vector<Boid> initBoids(int count)
 {
 	std::random_device rd;
 	std::mt19937 engine(rd());
-	std::uniform_real_distribution<float> posDist(0.0f, 1.0f);
+	std::uniform_real_distribution<float> posDist(-getInitBoidRange(), getInitBoidRange());
 	std::uniform_real_distribution<float> dirDist(0.01f, 0.01f);
 
 	std::vector<Boid> boids;
@@ -267,16 +272,20 @@ static void copyTransformsToCuda(DemoBoids* demo, CudaMemory<Boid>& boids)
 
 	for (int i = 0; i < boidsCpu.size(); i++)
 	{
-		glm::quat rotationQuat = glm::rotation(glm::vec3(0.0f, 0.0f, 1.0f),
+		glm::quat targetRotation = glm::rotation(glm::vec3(0.0f, 0.0f, 1.0f),
 			glm::normalize(glm::vec3(boidsCpu[i].direction.x, boidsCpu[i].direction.y, boidsCpu[i].direction.z))
+			//glm::normalize(glm::vec3(boidTestDir[0], boidTestDir[1], boidTestDir[2]))
 		);
+
+		glm::quat rotation = glm::slerp(demo->boids[i]->m_orientation, targetRotation, 0.1f);
 
 		glm::mat4 model = glm::mat4();
 		model = glm::translate(model, glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z));
-		model *= glm::mat4_cast(rotationQuat);
+		model *= glm::mat4_cast(rotation);
 		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
 
 		demo->boids[i]->m_modelMatrix = model;
+		demo->boids[i]->m_orientation = rotation;
 
 		flockCenter += glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z);
 	}
@@ -339,12 +348,12 @@ static void boids_body(int argc, char** argv)
 	cudaGLSetGLDevice(0);
 #endif
 
-	std::vector<Boid> boids = init_boids(BOID_COUNT);
+	std::vector<Boid> boids = initBoids(BOID_COUNT);
 	CudaMemory<Boid> cudaBoids(boids.size(), boids.data());
 	CudaMemory<float3> outDirectionsCuda(BOID_COUNT);
 
-	dim3 blockDim(TPB, 1);
-	dim3 gridDim(getNumberOfParts(BOID_COUNT, TPB), 1);
+	dim3 blockDim(THREADS_PER_BLOCK, 1);
+	dim3 gridDim(getNumberOfParts(BOID_COUNT, THREADS_PER_BLOCK), 1);
 
 	FlockConfig flockConfig = update_config();
 	CudaMemory<FlockConfig> flockConfigCuda(1, &flockConfig);
@@ -355,6 +364,7 @@ static void boids_body(int argc, char** argv)
 		flockConfigCuda.store(update_config());
 #endif
 
+#ifdef SIMULATE
 		CudaTimer timer;
 		timer.start();
 		updateDirections << <gridDim, blockDim >> > (cudaBoids.device(), outDirectionsCuda.device(), BOID_COUNT, flockConfigCuda.device());
@@ -362,13 +372,16 @@ static void boids_body(int argc, char** argv)
 #ifndef VISUALIZE
 		timer.print("Update directions: ");
 #endif
+#endif
 
+#ifdef SIMULATE
 		timer.start();
 		updatePositions << <gridDim, blockDim >> > (cudaBoids.device(), outDirectionsCuda.device(), BOID_COUNT, flockConfigCuda.device());
 		timer.stop_wait();
 		
 #ifndef VISUALIZE
 		timer.print("Update positions: ");
+#endif
 #endif
 
 #ifdef VISUALIZE

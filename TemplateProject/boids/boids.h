@@ -3,12 +3,11 @@
 // Simulation
 // perching
 // collision avoidance
-// view angle
+// view angle check
 
 // Graphics
-// boid rotation
 // view angle visualization
-// draw sprites or better models
+// draw sprite or better model
 
 // Performance
 // unroll boid loop/make block size 32 and remove sync

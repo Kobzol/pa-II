@@ -4,7 +4,7 @@
 #include "cudamem.h"
 
 
-#define TPB (128)
+#define THREADS_PER_BLOCK (128)
 
 static __global__ void sumVector(float* __restrict__ a, float* __restrict__ b, size_t size, float* __restrict__ c)
 {
@@ -33,8 +33,8 @@ static void vectors()
 	CudaMemory<float> deviceB(b.size(), &b[0]);
 	CudaMemory<float> deviceC(a.size());
 
-	dim3 dimBlock(TPB, 1, 1);
-	dim3 dimGrid(getNumberOfParts(M, TPB), 1, 1);
+	dim3 dimBlock(THREADS_PER_BLOCK, 1, 1);
+	dim3 dimGrid(getNumberOfParts(M, THREADS_PER_BLOCK), 1, 1);
 
 	{
 		CudaTimer timer(true);
