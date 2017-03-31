@@ -53,7 +53,7 @@ public:
 
 		CHECK_CUDA_CALL(cudaMemcpy(&dest, this->devicePointer, sizeof(T) * count, cudaMemcpyDeviceToHost));
 	}
-	void store(T& src, size_t count = 1, size_t start_index = 0)
+	void store(const T& src, size_t count = 1, size_t start_index = 0)
 	{
 		if (count == 0)
 		{

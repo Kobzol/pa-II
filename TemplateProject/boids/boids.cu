@@ -10,15 +10,37 @@
 #include "../cudamem.h"
 #include "../opengl/sceneManager.h"
 #include "../opengl/demos/demo_boids.h"
+#include "../opengl/CoreHeaders/sceneGUI.h"
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include <cuda_gl_interop.h>
 
-#define BOID_COUNT (50)
+#define BOID_COUNT (10)
 #define TPB (128)
 
 #define USE_SHARED_MEM
 #define VISUALIZE
 
+double boidsSeparationFactor = 1.0;
+double boidsCohesionFactor = 0.7;
+double boidsAlignmentFactor = 1.0;
+double boidsGoalFactor = 0.05;
+glm::vec3 boidGoal{ 10.0f, 0.0f, 0.0f };
+
+double boidsSeparationNeighbourhood = 1.0f;
+double boidsCohesionNeighbourhood = 4.0f;
+double boidsAlignmentNeighbourhood = 1.0f;
+
+double boidsMaxVelocity = 0.01f;
+
+static glm::vec3 flockCenter{ 0.0f, 0.0f, 0.0f };
+
+/// Test
+double boidTestDir[3] = { 0.0, 0.0, 1.0 };
 
 /// Structures
 struct Boid
@@ -48,26 +70,20 @@ struct Force
 };
 struct FlockConfig
 {
-	float boidSeparationFactor = 1.0f;
-	float boidCohesionFactor = 0.75f;
-	float boidAlignmentFactor = 0.7f;
-	float boidGoalFactor = 1 / 30.0f;
+	float separationFactor;
+	float cohesionFactor;
+	float alignmentFactor;
+	float goalFactor;
 
-	float boidSeparateNearby = 1.0f;
-	float boidCohesionNearby = 4.0f;
-	float boidAlignmentNearby = 2.0f;
+	float separationNeighbourhood;
+	float cohesionNeighbourhood;
+	float alignmentNeighbourhood;
+	float3 goal;
 
-	float boidMaxVelocity = 0.01f;
+	float maxVelocity;
 };
 
-static std::atomic<bool> run{ true };
-static std::atomic<bool> configDirty{ true };
-static std::mutex configMutex;
-static FlockConfig flockConfig;
-
 /// CUDA
-__constant__ float3 cGoal;
-
 static __device__ float vecLength(float3 vec)
 {
 	return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
@@ -93,7 +109,7 @@ static __device__ float3 updateSeparation(float3 position, float3 otherPosition,
 {
 	float3 vec = position - otherPosition;
 	float length = vecLength(vec);
-	if (length == 0 || length >= config->boidSeparateNearby)
+	if (length == 0 || length >= config->separationNeighbourhood)
 	{
 		return make_float3(0.0f, 0.0f, 0.0f);
 	}
@@ -105,7 +121,7 @@ static __device__ float3 updateCohesion(float3 position, float3 otherPosition, i
 {
 	float3 vec = position - otherPosition;
 	float length = vecLength(vec);
-	if (length == 0 || length >= config->boidCohesionNearby)
+	if (length == 0 || length >= config->cohesionNeighbourhood)
 	{
 		return make_float3(0.0f, 0.0f, 0.0f);
 	}
@@ -117,7 +133,7 @@ static __device__ float3 updateAlignment(float3 position, float3 otherPosition, 
 {
 	float3 vec = position - otherPosition;
 	float length = vecLength(vec);
-	if (length == 0 || length >= config->boidAlignmentNearby)
+	if (length == 0 || length >= config->alignmentNeighbourhood)
 	{
 		return make_float3(0.0f, 0.0f, 0.0f);
 	}
@@ -205,10 +221,10 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 	}
 
 	float3 direction = make_float3(0.0f, 0.0f, 0.0f);
-	direction += force.alignment * config->boidAlignmentFactor;
-	direction += force.separation * config->boidSeparationFactor;
-	direction += (force.cohesion - position) * config->boidCohesionFactor;
-	direction += vecNormalize(cGoal - position) * config->boidGoalFactor;
+	direction += force.alignment * config->alignmentFactor;
+	direction += force.separation * config->separationFactor;
+	direction += (force.cohesion - position) * config->cohesionFactor;
+	direction += vecNormalize(config->goal - position) * config->goalFactor;
 
 	outDirections[boidId] = direction;
 #pragma endregion
@@ -219,7 +235,7 @@ static __global__ void updatePositions(Boid* boids, float3* directions, size_t s
 	if (boidId >= size) return;
 
 	boids[boidId].direction += directions[boidId];
-	boids[boidId].direction = vecClamp(boids[boidId].direction, config->boidMaxVelocity);
+	boids[boidId].direction = vecClamp(boids[boidId].direction, config->maxVelocity);
 	boids[boidId].position += boids[boidId].direction;
 }
 
@@ -247,16 +263,72 @@ static void copyTransformsToCuda(DemoBoids* demo, CudaMemory<Boid>& boids)
 	std::vector<Boid> boidsCpu(BOID_COUNT);
 	boids.load(*boidsCpu.data(), BOID_COUNT);
 
+	flockCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+
 	for (int i = 0; i < boidsCpu.size(); i++)
 	{
-		glm::mat4 model;
+		glm::quat rotationQuat = glm::rotation(glm::vec3(0.0f, 0.0f, 1.0f),
+			glm::normalize(glm::vec3(boidsCpu[i].direction.x, boidsCpu[i].direction.y, boidsCpu[i].direction.z))
+		);
+
+		glm::mat4 model = glm::mat4();
 		model = glm::translate(model, glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z));
+		model *= glm::mat4_cast(rotationQuat);
 		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
-		demo->models[i] = model;
+
+		demo->boids[i]->m_modelMatrix = model;
+
+		flockCenter += glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z);
 	}
+
+	flockCenter /= boidsCpu.size();
 }
 
-void boids_body(int argc, char** argv)
+static FlockConfig update_config()
+{
+	FlockConfig config = { 0 };
+	config.separationFactor = boidsSeparationFactor;
+	config.cohesionFactor = boidsCohesionFactor;
+	config.alignmentFactor = boidsAlignmentFactor;
+	config.goalFactor = boidsGoalFactor;
+	config.goal = make_float3(boidGoal.x, boidGoal.y, boidGoal.z);
+
+	config.cohesionNeighbourhood = boidsCohesionNeighbourhood;
+	config.separationNeighbourhood = boidsSeparationNeighbourhood;
+	config.alignmentNeighbourhood = boidsAlignmentNeighbourhood;
+
+	config.maxVelocity = boidsMaxVelocity;
+
+	return config;
+}
+static glm::vec3 getMousePos(Mouse* mouse)
+{
+	SceneData* sceneData = SceneManager::GetInstance()->m_sceneData;
+	unsigned int* screen = SceneManager::GetInstance()->m_sceneSetting->m_screen;
+	glm::vec3 position = glm::vec3(mouse->m_lastPosition[0], screen[1] - mouse->m_lastPosition[1], 1.0f);
+
+	return glm::unProject(position, sceneData->cameras[0]->getVM(), sceneData->cameras[0]->getProjectionMatrix(), glm::vec4(0, 0, screen[0], screen[1]));
+}
+static void updateTarget(DemoBoids* demo)
+{
+	SceneData* sceneData = SceneManager::GetInstance()->m_sceneData;
+	Mouse* mouse = sceneData->mouse;
+
+	if (!mouse->clickPending) return;
+	mouse->clickPending = false;
+
+	glm::vec3 pos = getMousePos(mouse);
+	glm::vec3 cameraPosition = sceneData->cameras[0]->getPosition();
+	glm::vec3 toFlock = flockCenter - cameraPosition;
+	glm::vec3 toTarget = glm::normalize(pos - cameraPosition);
+	toTarget *= glm::dot(toFlock, toTarget);
+	toTarget += cameraPosition;
+		
+	boidGoal = toTarget;
+	demo->modelObjects[0]->setPosition(boidGoal.x, boidGoal.y, boidGoal.z);
+}
+
+static void boids_body(int argc, char** argv)
 {
 	srand((unsigned int) time(nullptr));
 
@@ -267,9 +339,6 @@ void boids_body(int argc, char** argv)
 	cudaGLSetGLDevice(0);
 #endif
 
-	float3 goal = make_float3(10.0f, 0.0f, 0.0f);
-	CudaConstant<float3>::toDevice(cGoal, &goal);
-
 	std::vector<Boid> boids = init_boids(BOID_COUNT);
 	CudaMemory<Boid> cudaBoids(boids.size(), boids.data());
 	CudaMemory<float3> outDirectionsCuda(BOID_COUNT);
@@ -277,19 +346,13 @@ void boids_body(int argc, char** argv)
 	dim3 blockDim(TPB, 1);
 	dim3 gridDim(getNumberOfParts(BOID_COUNT, TPB), 1);
 
+	FlockConfig flockConfig = update_config();
 	CudaMemory<FlockConfig> flockConfigCuda(1, &flockConfig);
 
-	while (run)
+	while (true)
 	{
 #ifdef VISUALIZE
-		{
-			if (configDirty)
-			{
-				std::lock_guard<decltype(configMutex)> lock(configMutex);
-				flockConfigCuda.store(flockConfig);
-				configDirty = false;
-			}
-		}
+		flockConfigCuda.store(update_config());
 #endif
 
 		CudaTimer timer;
@@ -310,29 +373,15 @@ void boids_body(int argc, char** argv)
 
 #ifdef VISUALIZE
 		copyTransformsToCuda(demo, cudaBoids);
+		updateTarget(demo);
+
 		sceneManager->Refresh();
+
 		Sleep(5);
 #endif
 	}
 }
 void boids(int argc, char** argv)
 {
-	std::thread runThread(boids_body, argc, argv);
-	
-	std::string line;
-	while (std::getline(std::cin, line))
-	{
-		if (line[0] == 'q')
-		{
-			run = false;
-			runThread.join();
-			break;
-		}
-		else if (line[0] == 'a')
-		{
-			std::lock_guard<decltype(configMutex)> lock(configMutex);
-			configDirty = true;
-			flockConfig.boidCohesionFactor = -flockConfig.boidCohesionFactor;
-		}
-	}
+	boids_body(argc, argv);
 }
