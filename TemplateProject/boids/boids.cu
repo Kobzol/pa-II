@@ -19,11 +19,13 @@
 
 #include <cuda_gl_interop.h>
 
-#define BOID_COUNT (100)
+#define BOID_COUNT (10000)
 #define THREADS_PER_BLOCK (256)
 
-#define USE_SHARED_MEM
-#define VISUALIZE
+//#define USE_SHARED_MEM
+#define CHECK_VIEW_RANGE
+
+//#define VISUALIZE
 #define SIMULATE
 
 double boidsSeparationFactor = 1.0;
@@ -37,6 +39,7 @@ double boidsCohesionNeighbourhood = 4.0f;
 double boidsAlignmentNeighbourhood = 1.0f;
 
 double boidsMaxVelocity = 0.01f;
+double boidsViewAngle = 135.0f;
 
 static glm::vec3 flockCenter{ 0.0f, 0.0f, 0.0f };
 
@@ -82,47 +85,49 @@ struct FlockConfig
 	float3 goal;
 
 	float maxVelocity;
+	float viewAngle;
 };
 
 /// CUDA
-static __device__ float vecLength(float3 vec)
+static __device__ bool operator==(const float3& vec1, const float3& vec2)
 {
-	return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+	return vec1.x == vec2.x && vec1.y == vec2.y && vec1.z == vec2.z;
 }
-static __device__ float3 vecNormalize(float3 vec)
-{
-	float length = vecLength(vec);
-	if (length == 0.0f) return vec;
 
-	return vec / length;
-}
-static __device__ float3 vecClamp(float3 vec, float max)
+static __device__ float3 vecClamp(const float3& vec, float max)
 {
-	float length = vecLength(vec);
-	if (length > max)
+	float len = length(vec);
+	if (len != 0.0f && len > max)
 	{
-		return vec * (max / length);
+		return vec * (max / len);
 	}
 	return vec;
 }
+static __device__ float3 vecNormalize(const float3& vec)
+{
+	float len = length(vec);
+	if (len == 0.0f) return vec;
 
-static __device__ float3 updateSeparation(float3 position, float3 otherPosition, int& count, FlockConfig* config)
+	return vec / len;
+}
+
+static __device__ float3 updateSeparation(const float3& position, const float3& otherPosition, int& count, FlockConfig* config)
 {
 	float3 vec = position - otherPosition;
-	float length = vecLength(vec);
-	if (length == 0 || length >= config->separationNeighbourhood)
+	float len = length(vec);
+	if (len == 0 || len >= config->separationNeighbourhood)
 	{
 		return make_float3(0.0f, 0.0f, 0.0f);
 	}
 
 	count++;
-	return vecNormalize(vec) / length;
+	return vecNormalize(vec) / len;
 }
-static __device__ float3 updateCohesion(float3 position, float3 otherPosition, int& count, FlockConfig* config)
+static __device__ float3 updateCohesion(const float3& position, const float3& otherPosition, int& count, FlockConfig* config)
 {
 	float3 vec = position - otherPosition;
-	float length = vecLength(vec);
-	if (length == 0 || length >= config->cohesionNeighbourhood)
+	float len = length(vec);
+	if (len == 0 || len >= config->cohesionNeighbourhood)
 	{
 		return make_float3(0.0f, 0.0f, 0.0f);
 	}
@@ -130,11 +135,11 @@ static __device__ float3 updateCohesion(float3 position, float3 otherPosition, i
 	count++;
 	return otherPosition;
 }
-static __device__ float3 updateAlignment(float3 position, float3 otherPosition, float3 otherDirection, int& count, FlockConfig* config)
+static __device__ float3 updateAlignment(const float3& position, const float3& otherPosition, const float3& otherDirection, int& count, FlockConfig* config)
 {
 	float3 vec = position - otherPosition;
-	float length = vecLength(vec);
-	if (length == 0 || length >= config->alignmentNeighbourhood)
+	float len = length(vec);
+	if (len == 0 || len >= config->alignmentNeighbourhood)
 	{
 		return make_float3(0.0f, 0.0f, 0.0f);
 	}
@@ -149,8 +154,21 @@ static __device__ void updateFlock(Force& force, const float3& position, const f
 	force.cohesion += updateCohesion(position, otherPosition, force.cohesionCount, config);
 	force.alignment += updateAlignment(position, otherPosition, otherDirection, force.alignmentCount, config);
 }
+static __device__ bool isInViewRange(const float3& position, const float3& direction, const float3& otherPosition, float viewAngle)
+{
+#ifdef CHECK_VIEW_RANGE
+	if (position == otherPosition) return false;
 
-static __global__ void updateDirections(Boid* __restrict__ boids, float3* __restrict__ outDirections, const int size, FlockConfig* config)
+	float3 toTarget = vecNormalize(otherPosition - position);
+
+	float angle = atan2(length(cross(toTarget, direction)), dot(toTarget, direction));
+	return angle < viewAngle;
+#else
+	return true;
+#endif
+}
+
+static __global__ void updateDirections(Boid* __restrict__ boids, float3* __restrict__ outAccelerations, const int size, FlockConfig* config)
 {
 #pragma region Init
 #ifdef USE_SHARED_MEM
@@ -163,12 +181,14 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 
 #ifdef USE_SHARED_MEM
 	float3 position = boids[min(boidId, size - 1)].position;
+	float3 direction = vecNormalize(boids[min(boidId, size - 1)].direction);
 #else
 	if (boidId >= size) return;
 
 	float3 position = boids[boidId].position;
+	float3 direction = vecNormalize(boids[boidId].direction);
 #endif
-	
+
 	Force force = { 0 };
 
 #ifdef USE_SHARED_MEM
@@ -181,7 +201,10 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 
 		for (int i = 0; i < tileSize; i++)
 		{
-			updateFlock(force, position, sharedBoids[i].position, sharedBoids[i].direction, config);
+			if (isInViewRange(position, direction, sharedBoids[i].position, config->viewAngle))
+			{
+				updateFlock(force, position, sharedBoids[i].position, sharedBoids[i].direction, config);
+			}
 		}
 		boidsLeft -= tileSize;
 		__syncthreads();
@@ -195,7 +218,10 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 
 	for (int i = 0; i < boidsLeft; i++)
 	{
-		updateFlock(force, position, sharedBoids[i].position, sharedBoids[i].direction, config);
+		if (isInViewRange(position, direction, sharedBoids[i].position, config->viewAngle))
+		{
+			updateFlock(force, position, sharedBoids[i].position, sharedBoids[i].direction, config);
+		}
 	}
 	__syncthreads();
 
@@ -203,7 +229,10 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 #else
 	for (int i = 0; i < size; i++)
 	{
-		updateFlock(force, position, boids[i].position, boids[i].direction, config);
+		if (isInViewRange(position, direction, boids[i].position, config->viewAngle))
+		{
+			updateFlock(force, position, boids[i].position, boids[i].direction, config);
+		}
 	}
 #endif
 
@@ -221,21 +250,26 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 		force.separation /= force.separationCount;
 	}
 
-	float3 direction = make_float3(0.0f, 0.0f, 0.0f);
-	direction += force.alignment * config->alignmentFactor;
-	direction += force.separation * config->separationFactor;
-	direction += (force.cohesion - position) * config->cohesionFactor;
-	direction += vecNormalize(config->goal - position) * config->goalFactor;
+	float3 acceleration = make_float3(0.0f, 0.0f, 0.0f);
+	acceleration += force.alignment * config->alignmentFactor;
+	acceleration += force.separation * config->separationFactor;
 
-	outDirections[boidId] = direction;
+	if (force.cohesionCount > 0)
+	{
+		acceleration += (force.cohesion - position) * config->cohesionFactor;
+	}
+	
+	acceleration += vecNormalize(config->goal - position) * config->goalFactor;
+
+	outAccelerations[boidId] = acceleration;
 #pragma endregion
 }
-static __global__ void updatePositions(Boid* boids, float3* directions, size_t size, FlockConfig* config)
+static __global__ void updatePositions(Boid* boids, float3* accelerations, size_t size, FlockConfig* config)
 {
 	const int boidId = blockDim.x * blockIdx.x + threadIdx.x;
 	if (boidId >= size) return;
 
-	boids[boidId].direction += directions[boidId];
+	boids[boidId].direction += accelerations[boidId];
 	boids[boidId].direction = vecClamp(boids[boidId].direction, config->maxVelocity);
 	boids[boidId].position += boids[boidId].direction;
 }
@@ -263,21 +297,30 @@ static std::vector<Boid> initBoids(int count)
 
 	return boids;
 }
+static bool isZero(float3 vec)
+{
+	return vec.x == 0.0f && vec.y == 0.0f && vec.z == 0.0f;
+}
 static void copyTransformsToCuda(DemoBoids* demo, CudaMemory<Boid>& boids)
 {
 	std::vector<Boid> boidsCpu(BOID_COUNT);
 	boids.load(*boidsCpu.data(), BOID_COUNT);
 
+	SceneManager* manager = SceneManager::GetInstance();
 	flockCenter = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	for (int i = 0; i < boidsCpu.size(); i++)
 	{
-		glm::quat targetRotation = glm::rotation(glm::vec3(0.0f, 0.0f, 1.0f),
-			glm::normalize(glm::vec3(boidsCpu[i].direction.x, boidsCpu[i].direction.y, boidsCpu[i].direction.z))
-			//glm::normalize(glm::vec3(boidTestDir[0], boidTestDir[1], boidTestDir[2]))
-		);
+		glm::quat rotation = demo->boids[i]->m_orientation;
+		if (!isZero(boidsCpu[i].direction))
+		{
+			glm::quat targetRotation = glm::rotation(glm::vec3(0.0f, 0.0f, 1.0f),
+				glm::normalize(glm::vec3(boidsCpu[i].direction.x, boidsCpu[i].direction.y, boidsCpu[i].direction.z))
+				//glm::normalize(glm::vec3(boidTestDir[0], boidTestDir[1], boidTestDir[2]))
+			);
 
-		glm::quat rotation = glm::slerp(demo->boids[i]->m_orientation, targetRotation, 0.1f);
+			rotation = glm::slerp(demo->boids[i]->m_orientation, targetRotation, manager->delta * 2.0f);
+		}
 
 		glm::mat4 model = glm::mat4();
 		model = glm::translate(model, glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z));
@@ -286,6 +329,15 @@ static void copyTransformsToCuda(DemoBoids* demo, CudaMemory<Boid>& boids)
 
 		demo->boids[i]->m_modelMatrix = model;
 		demo->boids[i]->m_orientation = rotation;
+		demo->boids[i]->setViewAngle(boidsViewAngle);
+
+		glm::quat viewAngleRotation = glm::rotation(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		model = glm::mat4();
+		model = glm::translate(model, glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z));
+		model *= glm::mat4_cast(rotation * viewAngleRotation);
+		model = glm::scale(model, glm::vec3(0.4f, 0.4f, 0.4f));
+		demo->boids[i]->viewAngleModelMatrix = model;
 
 		flockCenter += glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z);
 	}
@@ -307,6 +359,7 @@ static FlockConfig update_config()
 	config.alignmentNeighbourhood = boidsAlignmentNeighbourhood;
 
 	config.maxVelocity = boidsMaxVelocity;
+	config.viewAngle = glm::radians(boidsViewAngle);
 
 	return config;
 }
@@ -350,7 +403,7 @@ static void boids_body(int argc, char** argv)
 
 	std::vector<Boid> boids = initBoids(BOID_COUNT);
 	CudaMemory<Boid> cudaBoids(boids.size(), boids.data());
-	CudaMemory<float3> outDirectionsCuda(BOID_COUNT);
+	CudaMemory<float3> accelerationsCuda(BOID_COUNT);
 
 	dim3 blockDim(THREADS_PER_BLOCK, 1);
 	dim3 gridDim(getNumberOfParts(BOID_COUNT, THREADS_PER_BLOCK), 1);
@@ -367,7 +420,7 @@ static void boids_body(int argc, char** argv)
 #ifdef SIMULATE
 		CudaTimer timer;
 		timer.start();
-		updateDirections << <gridDim, blockDim >> > (cudaBoids.device(), outDirectionsCuda.device(), BOID_COUNT, flockConfigCuda.device());
+		updateDirections << <gridDim, blockDim >> > (cudaBoids.device(), accelerationsCuda.device(), BOID_COUNT, flockConfigCuda.device());
 		timer.stop_wait();
 #ifndef VISUALIZE
 		timer.print("Update directions: ");
@@ -376,7 +429,7 @@ static void boids_body(int argc, char** argv)
 
 #ifdef SIMULATE
 		timer.start();
-		updatePositions << <gridDim, blockDim >> > (cudaBoids.device(), outDirectionsCuda.device(), BOID_COUNT, flockConfigCuda.device());
+		updatePositions << <gridDim, blockDim >> > (cudaBoids.device(), accelerationsCuda.device(), BOID_COUNT, flockConfigCuda.device());
 		timer.stop_wait();
 		
 #ifndef VISUALIZE
