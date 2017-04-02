@@ -226,8 +226,8 @@ static inline void getBufferImage(const GLint target, const GLenum attachment, c
 						}
 						else
 						{
-							minF = MINIMUM(srcBuffer[srcIdx], minF);
-							maxF = MAXIMUM(srcBuffer[srcIdx], maxF);
+							//minF = MINIMUM(srcBuffer[srcIdx], minF);
+							//maxF = MAXIMUM(srcBuffer[srcIdx], maxF);
 						}
 					}
 				}

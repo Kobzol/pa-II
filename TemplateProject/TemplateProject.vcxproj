@@ -35,7 +35,9 @@
     <ClInclude Include="cudautil.cuh" />
     <ClInclude Include="graphics\imageKernels.cuh" />
     <ClInclude Include="opengl\code\boid\entity_boid.h" />
-    <ClInclude Include="opengl\code\quad\entity_quad.h" />
+    <ClInclude Include="opengl\code\line\entity_line.h" />
+    <ClInclude Include="opengl\code\line\vao_line.h" />
+    <ClInclude Include="opengl\code\quad\entity_view_angle.h" />
     <ClInclude Include="opengl\code\quad\vao_quad.h" />
     <ClInclude Include="opengl\code\tetrahedra\TetrahedraEntity.h" />
     <ClInclude Include="opengl\code\tetrahedra\TetrahedraVAO.h" />
@@ -88,6 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="opengl\code\boid\entity_boid.cpp" />
     <ClCompile Include="opengl\code\uniform.cpp" />
     <ClCompile Include="opengl\code\util.cpp" />
     <ClCompile Include="opengl\demos\demo_boids.cpp" />
@@ -97,6 +100,8 @@
   <ItemGroup>
     <None Include="opengl\Resources\shaders\boids.frag" />
     <None Include="opengl\Resources\shaders\boids.vert" />
+    <None Include="opengl\Resources\shaders\line.frag" />
+    <None Include="opengl\Resources\shaders\line.vert" />
     <None Include="opengl\Resources\shaders\quad.vert" />
     <None Include="opengl\Resources\shaders\screen_v3_t2.frag" />
     <None Include="opengl\Resources\shaders\screen_v3_t2.vert" />

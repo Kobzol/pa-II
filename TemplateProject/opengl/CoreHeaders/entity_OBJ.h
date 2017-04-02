@@ -15,6 +15,7 @@
 
 #include "entity_VAO.h"
 #include "model.h"
+#include <CoreHeaders/camera.h>
 
 
 class Entity_OBJ : public Entity_VAO

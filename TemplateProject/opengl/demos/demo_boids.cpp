@@ -12,10 +12,13 @@
 #include "../code/uniform.h"
 #include "../code/boid/entity_boid.h"
 #include "../code/quad/vao_quad.h"
+#include "../code/line/vao_line.h"
+#include "../code/line/entity_line.h"
 
 #define SHADER_BOID (0)
 #define SHADER_PHONG (1)
 #define SHADER_VIEW_ANGLE (2)
+#define SHADER_LINE (3)
 
 #define MODEL_BOID (0)
 #define MODEL_VASE (1)
@@ -23,6 +26,7 @@
 #define VAO_BOID (0)
 #define VAO_VASE (1)
 #define VAO_QUAD (2)
+#define VAO_LINE (3)
 
 void DemoBoids::initShaders()
 {
@@ -30,6 +34,7 @@ void DemoBoids::initShaders()
 	initShaderProgram("boids.vert", "boids.frag");
 	initShaderProgram("ads_v3_n3_t3.vert", "ads_v3_n3_t3.frag");
 	initShaderProgram("quad.vert", "view_angle.frag");
+	initShaderProgram("line.vert", "line.frag");
 	resetResPath();
 }
 
@@ -62,6 +67,10 @@ void DemoBoids::initVAOs()
 	vao = new QuadVAO();
 	vao->init();
 	m_sceneData->vaos.push_back(vao);
+
+	vao = new LineVAO();
+	vao->init();
+	m_sceneData->vaos.push_back(vao);
 }
 
 void DemoBoids::initMaterials()
@@ -89,7 +98,8 @@ void DemoBoids::initSceneEntities()
 	for (int i = 0; i < this->boidCount; i++)
 	{
 		Entity_Boid *e1 = new Entity_Boid(m_sceneData->models[MODEL_BOID], m_sceneData->vaos[VAO_BOID],
-			m_sceneData->vaos[VAO_QUAD], m_sceneData->shaderPrograms[SHADER_VIEW_ANGLE]);
+			m_sceneData->vaos[VAO_QUAD], m_sceneData->shaderPrograms[SHADER_VIEW_ANGLE],
+			m_sceneData->vaos[VAO_LINE], m_sceneData->shaderPrograms[SHADER_LINE]);
 		e1->setPosition(0.0f, 0.0, 0.0f);
 		e1->init();
 
@@ -109,28 +119,20 @@ void DemoBoids::initSceneEntities()
 void DemoBoids::render()
 {
 	SceneSetting* ss = SceneSetting::GetInstance();
+	for (int i = 0; i < m_sceneData->shaderPrograms.size(); i++)
+	{
+		ShaderProgram* sp = m_sceneData->shaderPrograms[i];
+		sp->enable();
+		Uniform<glm::mat4>::bind("PMatrix", sp->m_programObject, ss->m_activeCamera->getProjectionMatrix());
+		Uniform<glm::mat4>::bind("VMatrix", sp->m_programObject, ss->m_activeCamera->getViewMatrix());
+	}
 
 #pragma region Boids
-	ss->m_activeShader = m_sceneData->shaderPrograms[SHADER_VIEW_ANGLE];
-	ss->m_activeShader->enable();
-
-	Uniform<glm::mat4>::bind("PMatrix", ss->m_activeShader->m_programObject, ss->m_activeCamera->getProjectionMatrix());
-	Uniform<glm::mat4>::bind("VMatrix", ss->m_activeShader->m_programObject, ss->m_activeCamera->getViewMatrix());
-
-	ss->m_activeShader = m_sceneData->shaderPrograms[SHADER_BOID];
-	ss->m_activeShader->enable();
-
-	Uniform<glm::mat4>::bind("PMatrix", ss->m_activeShader->m_programObject, ss->m_activeCamera->getProjectionMatrix());
-	Uniform<glm::mat4>::bind("VMatrix", ss->m_activeShader->m_programObject, ss->m_activeCamera->getViewMatrix());
-
-
 	for (unsigned int i = 0; i < this->boids.size(); i++)
 	{
 		ss->m_activeShader = m_sceneData->shaderPrograms[SHADER_BOID];
 		ss->m_activeShader->enable();
-		Entity* obj = this->boids[i];
-		Material::setShaderUniform(obj->m_material, ss->m_activeShader, "material");
-		obj->draw(i);
+		this->boids[i]->draw(i);
 	}
 #pragma endregion
 	
@@ -139,8 +141,6 @@ void DemoBoids::render()
 	ss->m_activeShader->enable();
 
 	Light::setShaderUniform(m_sceneData->lights.at(0), ss->m_activeShader, "light");
-	Uniform<glm::mat4>::bind("PMatrix", ss->m_activeShader->m_programObject, ss->m_activeCamera->getProjectionMatrix());
-	Uniform<glm::mat4>::bind("VMatrix", ss->m_activeShader->m_programObject, ss->m_activeCamera->getViewMatrix());
 
 	for (unsigned int i = 0; i < this->modelObjects.size(); i++)
 	{

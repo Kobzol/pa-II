@@ -5,12 +5,14 @@
 #include <atomic>
 #include <mutex>
 
-#include "boids.h"
 #include "../cudautil.cuh"
 #include "../cudamem.h"
+
+#include "boids.h"
 #include "../opengl/sceneManager.h"
 #include "../opengl/demos/demo_boids.h"
 #include "../opengl/CoreHeaders/sceneGUI.h"
+
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -19,19 +21,19 @@
 
 #include <cuda_gl_interop.h>
 
-#define BOID_COUNT (10000)
+#define BOID_COUNT (1)
 #define THREADS_PER_BLOCK (256)
 
-//#define USE_SHARED_MEM
+#define USE_SHARED_MEM
 #define CHECK_VIEW_RANGE
 
-//#define VISUALIZE
-#define SIMULATE
+#define VISUALIZE
+//#define SIMULATE
 
 double boidsSeparationFactor = 1.0;
 double boidsCohesionFactor = 0.7;
 double boidsAlignmentFactor = 1.0;
-double boidsGoalFactor = 0.05;
+double boidsGoalFactor = 0.2;
 glm::vec3 boidGoal{ 10.0f, 0.0f, 0.0f };
 
 double boidsSeparationNeighbourhood = 1.0f;
@@ -45,48 +47,6 @@ static glm::vec3 flockCenter{ 0.0f, 0.0f, 0.0f };
 
 /// Test
 double boidTestDir[3] = { 0.0, 0.0, 1.0 };
-
-/// Structures
-struct Boid
-{
-	Boid()
-	{
-
-	}
-	Boid(float3 position, float3 direction) : position(position), direction(direction)
-	{
-
-	}
-
-	float3 position;
-	float3 direction;
-};
-struct Force
-{
-	float3 alignment;
-	int alignmentCount;
-
-	float3 cohesion;
-	int cohesionCount;
-
-	float3 separation;
-	int separationCount;
-};
-struct FlockConfig
-{
-	float separationFactor;
-	float cohesionFactor;
-	float alignmentFactor;
-	float goalFactor;
-
-	float separationNeighbourhood;
-	float cohesionNeighbourhood;
-	float alignmentNeighbourhood;
-	float3 goal;
-
-	float maxVelocity;
-	float viewAngle;
-};
 
 /// CUDA
 static __device__ bool operator==(const float3& vec1, const float3& vec2)
@@ -168,7 +128,7 @@ static __device__ bool isInViewRange(const float3& position, const float3& direc
 #endif
 }
 
-static __global__ void updateDirections(Boid* __restrict__ boids, float3* __restrict__ outAccelerations, const int size, FlockConfig* config)
+static __global__ void calculateAccelerations(Boid* __restrict__ boids, Acceleration* __restrict__ outAccelerations, const int size, FlockConfig* config)
 {
 #pragma region Init
 #ifdef USE_SHARED_MEM
@@ -250,26 +210,29 @@ static __global__ void updateDirections(Boid* __restrict__ boids, float3* __rest
 		force.separation /= force.separationCount;
 	}
 
-	float3 acceleration = make_float3(0.0f, 0.0f, 0.0f);
-	acceleration += force.alignment * config->alignmentFactor;
-	acceleration += force.separation * config->separationFactor;
+	Acceleration acc;
+	acc.alignment = force.alignment * config->alignmentFactor;
+	acc.separation = force.separation * config->separationFactor;
 
 	if (force.cohesionCount > 0)
 	{
-		acceleration += (force.cohesion - position) * config->cohesionFactor;
+		acc.cohesion = (force.cohesion - position) * config->cohesionFactor;
 	}
+	else acc.cohesion = make_float3(0.0f, 0.0f, 0.0f);
 	
-	acceleration += vecNormalize(config->goal - position) * config->goalFactor;
+	acc.goal = vecNormalize(config->goal - position) * config->goalFactor;
 
-	outAccelerations[boidId] = acceleration;
+	outAccelerations[boidId] = acc;
 #pragma endregion
 }
-static __global__ void updatePositions(Boid* boids, float3* accelerations, size_t size, FlockConfig* config)
+static __global__ void calculatePositions(Boid* boids, Acceleration* accelerations, size_t size, FlockConfig* config)
 {
 	const int boidId = blockDim.x * blockIdx.x + threadIdx.x;
 	if (boidId >= size) return;
 
-	boids[boidId].direction += accelerations[boidId];
+	float3 acc = accelerations[boidId].separation + accelerations[boidId].cohesion + accelerations[boidId].alignment + accelerations[boidId].goal;
+
+	boids[boidId].direction += acc;
 	boids[boidId].direction = vecClamp(boids[boidId].direction, config->maxVelocity);
 	boids[boidId].position += boids[boidId].direction;
 }
@@ -297,52 +260,26 @@ static std::vector<Boid> initBoids(int count)
 
 	return boids;
 }
-static bool isZero(float3 vec)
+static void copyTransformsFromCuda(DemoBoids* demo, CudaMemory<Boid>& boids, CudaMemory<Acceleration>& accelerations)
 {
-	return vec.x == 0.0f && vec.y == 0.0f && vec.z == 0.0f;
-}
-static void copyTransformsToCuda(DemoBoids* demo, CudaMemory<Boid>& boids)
-{
-	std::vector<Boid> boidsCpu(BOID_COUNT);
-	boids.load(*boidsCpu.data(), BOID_COUNT);
+	std::vector<Boid> cpuBoids(BOID_COUNT);
+	boids.load(*cpuBoids.data(), BOID_COUNT);
+
+	std::vector<Acceleration> cpuAccelerations(BOID_COUNT);
+	accelerations.load(*cpuAccelerations.data(), BOID_COUNT);
 
 	SceneManager* manager = SceneManager::GetInstance();
 	flockCenter = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	for (int i = 0; i < boidsCpu.size(); i++)
+	for (int i = 0; i < cpuBoids.size(); i++)
 	{
-		glm::quat rotation = demo->boids[i]->m_orientation;
-		if (!isZero(boidsCpu[i].direction))
-		{
-			glm::quat targetRotation = glm::rotation(glm::vec3(0.0f, 0.0f, 1.0f),
-				glm::normalize(glm::vec3(boidsCpu[i].direction.x, boidsCpu[i].direction.y, boidsCpu[i].direction.z))
-				//glm::normalize(glm::vec3(boidTestDir[0], boidTestDir[1], boidTestDir[2]))
-			);
-
-			rotation = glm::slerp(demo->boids[i]->m_orientation, targetRotation, manager->delta * 2.0f);
-		}
-
-		glm::mat4 model = glm::mat4();
-		model = glm::translate(model, glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z));
-		model *= glm::mat4_cast(rotation);
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
-
-		demo->boids[i]->m_modelMatrix = model;
-		demo->boids[i]->m_orientation = rotation;
+		demo->boids[i]->setTransforms(cpuBoids[i].position, cpuBoids[i].direction, cpuAccelerations[i]);
 		demo->boids[i]->setViewAngle(boidsViewAngle);
 
-		glm::quat viewAngleRotation = glm::rotation(glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-
-		model = glm::mat4();
-		model = glm::translate(model, glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z));
-		model *= glm::mat4_cast(rotation * viewAngleRotation);
-		model = glm::scale(model, glm::vec3(0.4f, 0.4f, 0.4f));
-		demo->boids[i]->viewAngleModelMatrix = model;
-
-		flockCenter += glm::vec3(boidsCpu[i].position.x, boidsCpu[i].position.y, boidsCpu[i].position.z);
+		flockCenter += glm::vec3(cpuBoids[i].position.x, cpuBoids[i].position.y, cpuBoids[i].position.z);
 	}
 
-	flockCenter /= boidsCpu.size();
+	flockCenter /= cpuBoids.size();
 }
 
 static FlockConfig update_config()
@@ -403,7 +340,7 @@ static void boids_body(int argc, char** argv)
 
 	std::vector<Boid> boids = initBoids(BOID_COUNT);
 	CudaMemory<Boid> cudaBoids(boids.size(), boids.data());
-	CudaMemory<float3> accelerationsCuda(BOID_COUNT);
+	CudaMemory<Acceleration> cudaAccelerations(BOID_COUNT);
 
 	dim3 blockDim(THREADS_PER_BLOCK, 1);
 	dim3 gridDim(getNumberOfParts(BOID_COUNT, THREADS_PER_BLOCK), 1);
@@ -420,7 +357,7 @@ static void boids_body(int argc, char** argv)
 #ifdef SIMULATE
 		CudaTimer timer;
 		timer.start();
-		updateDirections << <gridDim, blockDim >> > (cudaBoids.device(), accelerationsCuda.device(), BOID_COUNT, flockConfigCuda.device());
+		calculateAccelerations << <gridDim, blockDim >> > (cudaBoids.device(), cudaAccelerations.device(), BOID_COUNT, flockConfigCuda.device());
 		timer.stop_wait();
 #ifndef VISUALIZE
 		timer.print("Update directions: ");
@@ -429,7 +366,7 @@ static void boids_body(int argc, char** argv)
 
 #ifdef SIMULATE
 		timer.start();
-		updatePositions << <gridDim, blockDim >> > (cudaBoids.device(), accelerationsCuda.device(), BOID_COUNT, flockConfigCuda.device());
+		calculatePositions << <gridDim, blockDim >> > (cudaBoids.device(), cudaAccelerations.device(), BOID_COUNT, flockConfigCuda.device());
 		timer.stop_wait();
 		
 #ifndef VISUALIZE
@@ -438,7 +375,7 @@ static void boids_body(int argc, char** argv)
 #endif
 
 #ifdef VISUALIZE
-		copyTransformsToCuda(demo, cudaBoids);
+		copyTransformsFromCuda(demo, cudaBoids, cudaAccelerations);
 		updateTarget(demo);
 
 		sceneManager->Refresh();

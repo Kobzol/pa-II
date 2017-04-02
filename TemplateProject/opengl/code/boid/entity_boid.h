@@ -2,14 +2,32 @@
 
 #include "../CoreHeaders/entity_OBJ.h"
 #include "../quad/vao_quad.h"
+#include "../quad/entity_view_angle.h"
+#include "../line/vao_line.h"
+#include "../line/entity_line.h"
+#include "../../../boids/boids.h"
 
 class Entity_Boid : public Entity_OBJ
 {
 public:
-	Entity_Boid(Model* model, VAO* vao, VAO* quadVAO, ShaderProgram* quadShader) : Entity_OBJ(model, vao)
+	Entity_Boid(Model* model, VAO* vao, VAO* quadVAO, ShaderProgram* quadShader,
+		VAO* lineVAO, ShaderProgram* lineShader) : Entity_OBJ(model, vao), quadShader(quadShader), lineShader(lineShader)
 	{
-		this->quadVAO = quadVAO;
-		this->quadShader = quadShader;
+		glm::vec4 colors[] = {
+			glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+			glm::vec4(0.0f, 1.0f, 1.0f, 1.0f),
+			glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+			glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)
+		};
+		for (int i = 0; i < 4; i++)
+		{
+			LineEntity* entity = new LineEntity(lineVAO);
+			entity->init();
+			entity->color = colors[i];
+			this->lineEntities.push_back(entity);
+		}
+		this->viewAngleEntity = new ViewAngleEntity(quadVAO);
+		this->viewAngleEntity->init();
 	}
 	~Entity_Boid(void) {}
 
@@ -17,16 +35,18 @@ public:
 
 	void setViewAngle(float degrees)
 	{
-		this->viewAngle = glm::radians(fmod(degrees, 180.1f));
+		this->viewAngleEntity->setViewAngle(degrees);
 	}
-
-	VAO* quadVAO;
-	ShaderProgram* quadShader;
-	glm::mat4 viewAngleModelMatrix;
+	void setTransforms(float3 position, float3 direction, Acceleration acceleration);
 private:
 	void drawViewAngle();
+	void drawLineAngles();
 
-	float viewAngle;
+	ShaderProgram* quadShader;
+	ShaderProgram* lineShader;
+
+	ViewAngleEntity* viewAngleEntity;
+	std::vector<LineEntity*> lineEntities;
 };
 
 inline void Entity_Boid::draw(const unsigned int eid)
@@ -35,6 +55,7 @@ inline void Entity_Boid::draw(const unsigned int eid)
 
 	Entity_OBJ::draw(eid);
 
+	this->drawLineAngles();
 	this->drawViewAngle();
 }
 
@@ -44,17 +65,17 @@ inline void Entity_Boid::drawViewAngle()
 	ss->m_activeShader = this->quadShader;
 	ss->m_activeShader->enable();
 
-	Uniform<glm::mat4>::bind("MMatrix", ss->m_activeShader->m_programObject, this->viewAngleModelMatrix);
-	Uniform<glm::mat4>::bind("PMatrix", ss->m_activeShader->m_programObject, ss->m_activeCamera->getProjectionMatrix());
-	Uniform<glm::mat4>::bind("VMatrix", ss->m_activeShader->m_programObject, ss->m_activeCamera->getViewMatrix());
+	this->viewAngleEntity->draw();
+}
 
-	Uniform<float>::bind("ViewAngle", ss->m_activeShader->m_programObject, this->viewAngle);
+inline void Entity_Boid::drawLineAngles()
+{
+	SceneSetting* ss = SceneSetting::GetInstance();
+	ss->m_activeShader = this->lineShader;
+	ss->m_activeShader->enable();
 
-	glDisable(GL_CULL_FACE);
-
-	glBindVertexArray(this->quadVAO->m_object);
-	glDrawArrays(GL_QUADS, 0, 4);
-	glBindVertexArray(0);
-
-	glEnable(GL_CULL_FACE);
+	for (int i = 0; i < this->lineEntities.size(); i++)
+	{
+		this->lineEntities[i]->draw();
+	}
 }

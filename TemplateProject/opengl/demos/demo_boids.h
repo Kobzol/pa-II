@@ -3,7 +3,6 @@
 #include <sceneInitializer.h>
 
 #include <Entity_OBJ.h>
-#include "../code/quad/entity_quad.h"
 #include "../code/boid/entity_boid.h"
 
 class DemoBoids : public SceneInitializer
@@ -28,5 +27,4 @@ public:
 
 	std::vector<Entity_Boid*> boids;
 	std::vector<Entity_OBJ*> modelObjects;
-	std::vector<QuadEntity*> quads;
 };
