@@ -73,6 +73,42 @@ public:
 		m_isInitialized = true;
 	}
 
+	void createFromModelInterpolated(Model *m, Model* m2)
+	{
+		DynArray<Buffer<PNTP>> *geometry;
+		m->createVAOGeometryInterpolated(geometry, m_eai, false, m2);
+
+		GLuint tmpBuffer;
+		Buffer<PNTP> &gb = geometry->at(0);
+
+		glGenVertexArrays(1, &m_object);
+		glBindVertexArray(m_object);
+		glGenBuffers(1, &tmpBuffer);
+
+		glBindBuffer(GL_ARRAY_BUFFER, tmpBuffer);
+		glEnableVertexAttribArray(0); // position
+		glEnableVertexAttribArray(1); // normal
+		glEnableVertexAttribArray(2); // tex coords.
+		glEnableVertexAttribArray(3); // position 2
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, gb.m_elementSizeInBytes, 0);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, gb.m_elementSizeInBytes, (GLvoid*)(3 * sizeof(float)));
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, gb.m_elementSizeInBytes, (GLvoid*)(6 * sizeof(float)));
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, gb.m_elementSizeInBytes, (GLvoid*)(9 * sizeof(float)));
+
+		initBuffer(tmpBuffer, gb.m_data, gb.m_sizeInBytes, GL_ARRAY_BUFFER, GL_STATIC_DRAW);
+		m_buffers.push_back(tmpBuffer);
+
+		//Unbind
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+		SAFE_DELETE(geometry);
+
+		m_isInitialized = true;
+	}
+
+
 	void createFromModelWithTBN(Model *m)
 	{
 		DynArray<Buffer<PNT_TBN>> *geometry;

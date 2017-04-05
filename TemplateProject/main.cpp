@@ -3,8 +3,6 @@
 #include <iostream>
 #include <string>
 
-#include "boids/boids.h"
-
 void cviko1();
 void cviko2();
 void cviko3();
@@ -13,7 +11,9 @@ void cviko5();
 void cviko6();
 void cviko7(int argc, char** argv);
 
-cudaDeviceProp deviceProp;
+void boids(int argc, char** argv);
+
+static cudaDeviceProp deviceProp;
 
 int main(int argc, char *argv[])
 {

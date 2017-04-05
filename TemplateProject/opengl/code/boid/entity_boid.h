@@ -37,6 +37,10 @@ public:
 	{
 		this->viewAngleEntity->setViewAngle(degrees);
 	}
+	void setDrawHelper(bool value)
+	{
+		this->drawHelper = value;
+	}
 	void setTransforms(float3 position, float3 direction, Acceleration acceleration);
 private:
 	void drawViewAngle();
@@ -44,6 +48,8 @@ private:
 
 	ShaderProgram* quadShader;
 	ShaderProgram* lineShader;
+
+	bool drawHelper = false;
 
 	ViewAngleEntity* viewAngleEntity;
 	std::vector<LineEntity*> lineEntities;
@@ -55,8 +61,11 @@ inline void Entity_Boid::draw(const unsigned int eid)
 
 	Entity_OBJ::draw(eid);
 
-	this->drawLineAngles();
-	this->drawViewAngle();
+	if (this->drawHelper)
+	{
+		this->drawLineAngles();
+		this->drawViewAngle();
+	}
 }
 
 inline void Entity_Boid::drawViewAngle()

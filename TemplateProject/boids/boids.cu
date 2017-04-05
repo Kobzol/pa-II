@@ -21,14 +21,16 @@
 
 #include <cuda_gl_interop.h>
 
-#define BOID_COUNT (1)
+#define BOID_COUNT (100)
 #define THREADS_PER_BLOCK (256)
 
 #define USE_SHARED_MEM
 #define CHECK_VIEW_RANGE
 
 #define VISUALIZE
-//#define SIMULATE
+#define SIMULATE
+
+//#define DEBUG_DRAW
 
 double boidsSeparationFactor = 1.0;
 double boidsCohesionFactor = 0.7;
@@ -275,6 +277,10 @@ static void copyTransformsFromCuda(DemoBoids* demo, CudaMemory<Boid>& boids, Cud
 	{
 		demo->boids[i]->setTransforms(cpuBoids[i].position, cpuBoids[i].direction, cpuAccelerations[i]);
 		demo->boids[i]->setViewAngle(boidsViewAngle);
+
+#ifdef DEBUG_DRAW
+		demo->boids[i]->setDrawHelper(true);
+#endif
 
 		flockCenter += glm::vec3(cpuBoids[i].position.x, cpuBoids[i].position.y, cpuBoids[i].position.z);
 	}

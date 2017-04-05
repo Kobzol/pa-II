@@ -14,6 +14,7 @@
 #include <freeglut.h>
 #include <cudaDefs.h>
 #include <imageManager.h>
+#include "../cudamem.h"
 
 // includes, cuda
 #include <cuda_runtime.h>
@@ -34,6 +35,11 @@
 #include "../opengl/code/uniform.h"
 
 #define BLOCK_DIM 8
+
+struct Particle
+{
+	float life;
+};
 
 //CUDA variables
 static unsigned int imageWidth;
@@ -58,6 +64,14 @@ static ShaderProgram* program;
 static unsigned int viewportWidth = 1024;
 static unsigned int viewportHeight = 1024;
 
+static unsigned int mouseX = 0;
+static unsigned int mouseY = 0;
+
+static Particle* particleDev = nullptr;
+
+#define MAX_LIFE (30.0f)
+#define RADIUS (200.0f)
+
 #pragma region CUDA Routines
 
 __global__ void applyFilter(const unsigned char someValue, const unsigned int pboWidth, const unsigned int pboHeight, unsigned char *pbo)
@@ -70,6 +84,40 @@ __global__ void applyFilter(const unsigned char someValue, const unsigned int pb
 	uchar4 value = tex2D(cudaTexRef, x, y);
 
 	ptr[y * pboWidth + x] = make_uchar4(someValue, value.y, value.z, value.w);
+}
+__global__ void sphere(const unsigned int pboWidth, const unsigned int pboHeight, unsigned char *pbo, int mouseX, int mouseY, Particle* particles)
+{
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	uchar4* ptr = (uchar4*)pbo;
+	//uchar4 value = tex2D(cudaTexRef, x, y);
+
+	mouseX = (mouseX / 1024.0) * pboWidth;
+	mouseY = (mouseY / 1024.0) * pboHeight;
+		
+	uchar4 color = make_uchar4(0, 0, 0, 0);
+	float life = particles[y * pboWidth + x].life;
+
+	float2 centerPos = make_float2(pboHeight - mouseY, mouseX);
+	float2 pos = make_float2(y, x);
+
+	if (length(pos - centerPos) < RADIUS)
+	{
+		color = make_uchar4(255, 0, 0, 255);
+		life = MAX_LIFE;
+	}
+	/*else if (abs(pos.y - centerPos.y) < RADIUS && pos.x > centerPos.x && abs(pos.x - centerPos.x) < 50.0f)
+	{
+		life = MAX_LIFE / 2.0f;
+	}*/
+	else if (life > 0.0f)
+	{
+		color = make_uchar4((life / MAX_LIFE) * 255, 0, 0, 255);
+	}
+
+	ptr[y * pboWidth + x] = color;
+	particles[y * pboWidth + x].life = max(0.0f, life - 1.0f);
 }
 
 void cudaWorker()
@@ -103,9 +151,11 @@ void cudaWorker()
 	ks.dimGrid = dim3(getNumberOfParts(imageWidth, BLOCK_DIM), getNumberOfParts(imageHeight, BLOCK_DIM), 1);
 
 	//Calling applyFileter kernel
-	someValue++;
+	/*someValue++;
 	if (someValue>255) someValue = 0;
-	applyFilter<<<ks.dimGrid, ks.dimBlock>>>(someValue, imageWidth, imageHeight, pboData);
+	applyFilter<<<ks.dimGrid, ks.dimBlock>>>(someValue, imageWidth, imageHeight, pboData);*/
+
+	sphere <<< ks.dimGrid, ks.dimBlock >> > (imageWidth, imageHeight, pboData, mouseX, mouseY, particleDev);
 
 	//Following code release mapped resources, unbinds texture and ensures that PBO data will be coppied into OpenGL texture. Do not modify following code!
 	cudaUnbindTexture(&cudaTexRef);
@@ -310,6 +360,12 @@ void releaseResources()
 	releaseOpenGL();
 }
 
+static void mouseMove(int x, int y)
+{
+	mouseX = x;
+	mouseY = y;
+}
+
 void cviko7(int argc, char** argv)
 {
 	initGL(argc, argv);
@@ -319,6 +375,21 @@ void cviko7(int argc, char** argv)
 	initCUDAtex();
 
 	//start rendering mainloop
-    glutMainLoop();
+
+	glutMotionFunc(mouseMove);
+
+	Particle* particles = new Particle[imageWidth * imageHeight];
+	memset(particles, 0, sizeof(Particle) * imageWidth * imageHeight);
+
+	CudaMemory<Particle> cudaParticles(imageWidth * imageHeight, particles);
+	particleDev = cudaParticles.device();
+
+	while (true)
+	{
+		cudaWorker();
+
+		glutMainLoopEvent();
+		glutPostRedisplay();
+	}
     atexit(releaseResources);
 }

@@ -40,7 +40,7 @@ public:
 		if (this->automatic)
 		{
 			this->stop_wait();
-			std::cerr << this->get_time() << std::endl;
+			std::cerr << this->get_time() << " ms" << std::endl;
 		}
 
 		CHECK_CUDA_CALL(cudaEventDestroy(this->startEvent));

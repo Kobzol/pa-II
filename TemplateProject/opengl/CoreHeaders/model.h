@@ -27,10 +27,12 @@
 #define VERTEX_PNT_SIZE_IN_BYTES  36					// 3fv position | 3fv normal | 3fvTexCoords = (3 + 3 + 3) * sizeof(float)
 #define VERTEX_PNT_T_SIZE_IN_BYTES  52				// 3fv position | 3fv normal | 3fvTexCoords | 4fv tangent (3 + 3 + 3 + 4) * sizeof(float)
 #define VERTEX_PNT_TBN_SIZE_IN_BYTES  72				// 3fv position | 3fv normal | 3fvTexCoords | 3fv tangent | 3fv binormal | 3fv normal = (3 + 3 + 3 + 3 + 3 + 3) * sizeof(float)
+#define VERTEX_PNTP_SIZE_IN_BYTES 48
 
 typedef struct PNT { float data[9]; } PNT;
 typedef struct PNT_T { float data[13]; } PNT_T;
 typedef struct PNT_TBN { float data[18]; } PNT_TBN;
+typedef struct PNTP { float data[12]; } PNTP;
 
 class Model
 {
@@ -64,6 +66,7 @@ public:
 	void print(const char *fileName) const;
 
 	bool createVAOGeometry(DynArray<Buffer<PNT>> *&g, DynArray<ELEMENT_ARRAY_INFO> *&eai, const bool mergeParts);
+	bool createVAOGeometryInterpolated(DynArray<Buffer<PNTP>> *&g, DynArray<ELEMENT_ARRAY_INFO> *&eai, const bool mergeParts, Model* other);
 	bool createVAOGeometryWithT(DynArray<Buffer<PNT_T>> *&g, DynArray<ELEMENT_ARRAY_INFO> *&eai, const bool mergeParts);
 	bool createVAOGeometryWithTBN(DynArray<Buffer<PNT_TBN>> *&g, DynArray<ELEMENT_ARRAY_INFO> *&eai, const bool mergeParts);
 
@@ -254,6 +257,142 @@ inline bool Model::createVAOGeometry(DynArray<Buffer<PNT>> *&g, DynArray<ELEMENT
 	for(unsigned int i=1;i<eai->size(); i++)
 	{
 		(*eai)[i].m_startIndex = (*eai)[i-1].m_startIndex + (*eai)[i-1].m_noIndices;
+	}
+
+	return true;
+}
+inline bool Model::createVAOGeometryInterpolated(DynArray<Buffer<PNTP>> *&g, DynArray<ELEMENT_ARRAY_INFO> *&eai, const bool mergeParts, Model* other)
+{
+	g = new DynArray<Buffer<PNTP>>(4);
+
+	//DynArray<ELEMENT_ARRAY_INFO> eai(16);
+	eai = new DynArray<ELEMENT_ARRAY_INFO>(16);
+
+	Buffer<PNTP> gb;
+
+	ModelPart *mpPtr;
+	DynArray< ObjFace > *fPtr;
+	DynArray< glm::vec3 > *fnPtr;
+	ObjFace *face;
+
+	float* dstPtr;
+	float *srcPtr;
+	int index;
+
+	ObjFace* otherFace;
+	ModelPart* otherMpPtr;
+	DynArray< ObjFace > *otherFPtr;
+
+	float defaultNormal[3] = { 0.0f, 0.0f, 1.0f };
+	float defaultTexCoords[3] = { 0.0f, 0.0f, 0.0f };
+
+	unsigned int vertexSizeInBytes = VERTEX_PNTP_SIZE_IN_BYTES;		//3 position floats + 3 normal vector floats + 3 texture coords. floats
+
+	if (mergeParts)
+		mergeModelParts();
+
+	//Convert all model parts to geometry buffers such that a single VAO Vertex contains all needed attributes = position | normal | tex. coords
+	for (unsigned int i = 0; i<m_modelParts->size(); i++)					//Go through all mesh parts
+	{
+		mpPtr = m_modelParts->at(i);
+		otherMpPtr = other->m_modelParts->at(i);
+		otherFPtr = &(otherMpPtr->faces);
+		
+		fPtr = &(mpPtr->faces);
+		fnPtr = &(mpPtr->facesNormals);
+
+		mpPtr->sortByMaterialAndGeometry();
+		otherMpPtr->sortByMaterialAndGeometry();
+
+		gb.m_elementSizeInBytes = vertexSizeInBytes;
+		gb.m_noElements = mpPtr->noTriangles * 3 + mpPtr->noQuads * 4;
+		gb.m_sizeInBytes = gb.m_noElements * gb.m_elementSizeInBytes;
+		gb.m_data = (PNTP*)malloc(gb.m_sizeInBytes);
+		dstPtr = (float*)gb.m_data;
+
+		face = fPtr->front();
+		otherFace = otherFPtr->front();
+
+		ELEMENT_ARRAY_INFO tmpEAI;
+		tmpEAI.m_vertexCount = face->m_noVertices;
+		tmpEAI.setGeometry(tmpEAI.m_vertexCount);
+		tmpEAI.m_materialID = face->m_materiaID;
+		tmpEAI.m_noIndices = 0;
+		tmpEAI.m_startIndex = 0;
+
+		for (unsigned int j = 0; j<fPtr->size(); j++)						//Go through all faces of the mesh part 
+		{
+			if ((face->m_noVertices != tmpEAI.m_vertexCount) || (face->m_materiaID != tmpEAI.m_materialID))
+			{
+				eai->push_back(tmpEAI);
+				tmpEAI.m_vertexCount = face->m_noVertices;
+				tmpEAI.setGeometry(tmpEAI.m_vertexCount);
+				tmpEAI.m_materialID = face->m_materiaID;
+				tmpEAI.m_startIndex = tmpEAI.m_startIndex + tmpEAI.m_noIndices;
+				tmpEAI.m_noIndices = 0;
+			}
+			tmpEAI.m_noIndices += tmpEAI.m_vertexCount;
+
+			for (unsigned int x = 0; x<face->m_noVertices; x++)
+			{
+				index = face->m_vIds[x];
+				srcPtr = &(*m_points)[index][0];							//data pointer to the glm::vec3 vertex coordinates
+				*dstPtr = *srcPtr;	dstPtr++; srcPtr++;					//x																
+				*dstPtr = *srcPtr;	dstPtr++; srcPtr++;					//y
+				*dstPtr = *srcPtr;	dstPtr++;							//z
+
+				index = face->m_nIds[x];
+				srcPtr = (index == -1) ? defaultNormal : &(*m_normals)[index][0];	//data pointer to the glm::vec3 normal coordinates
+				*dstPtr = *srcPtr;	dstPtr++; srcPtr++;					//x
+				*dstPtr = *srcPtr;	dstPtr++; srcPtr++;					//y
+				*dstPtr = *srcPtr;	dstPtr++;							//z
+
+				index = face->m_tIds[x];
+				srcPtr = (index == -1) ? defaultTexCoords : &(*m_texCoords)[index][0];	//data pointer to the glm::vec3 texture coordinates		
+				*dstPtr = *srcPtr;	dstPtr++; srcPtr++;					//x
+				*dstPtr = *srcPtr;	dstPtr++; srcPtr++;					//y
+				*dstPtr = *srcPtr;	dstPtr++;							//z
+
+				srcPtr = &(*other->m_points)[face->m_vIds[x]][0];
+				*dstPtr = *srcPtr;	dstPtr++; srcPtr++;					//x																
+				*dstPtr = *srcPtr;	dstPtr++; srcPtr++;					//y
+				*dstPtr = *srcPtr;	dstPtr++;							//z
+			}
+
+			face++;
+		}
+
+		face--;
+		eai->push_back(tmpEAI);
+		g->push_back(gb);	//call copy constructor avoid deleting inner gb.m_data buffer
+
+	}
+
+	//Merge all geometry buffers  to be able to create a single "GL_STATIC_DRAW" VAO
+	if (g->size() > 1)
+	{
+		unsigned int totalSizeInBytes = 0;
+		for (unsigned int i = 0; i<g->size(); i++)
+			totalSizeInBytes += g->at(i).m_sizeInBytes;
+
+		gb.m_sizeInBytes = totalSizeInBytes;
+		gb.m_elementSizeInBytes = vertexSizeInBytes;
+		gb.m_noElements = gb.m_sizeInBytes / gb.m_elementSizeInBytes;
+		gb.m_data = (PNTP*)malloc(gb.m_sizeInBytes);
+		char *dst = (char*)gb.m_data;
+		for (unsigned int i = 0; i<g->size(); i++)
+		{
+			memcpy_s(dst, gb.m_sizeInBytes, g->at(i).m_data, g->at(i).m_sizeInBytes);
+			dst += g->at(i).m_sizeInBytes;
+			g->at(i).~Buffer();
+		}
+		g->clear();
+		g->push_back(gb);	//call copy constructor avoid deleting inner gb.m_data buffer
+	}
+
+	for (unsigned int i = 1; i<eai->size(); i++)
+	{
+		(*eai)[i].m_startIndex = (*eai)[i - 1].m_startIndex + (*eai)[i - 1].m_noIndices;
 	}
 
 	return true;

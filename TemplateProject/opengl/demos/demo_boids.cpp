@@ -8,6 +8,7 @@
 #include "entity_GridXY.h"
 #include "entity_Cube_Simple.h"
 #include "entity_OBJ.h"
+#include <sceneManager.h>
 
 #include "../code/uniform.h"
 #include "../code/boid/entity_boid.h"
@@ -21,7 +22,8 @@
 #define SHADER_LINE (3)
 
 #define MODEL_BOID (0)
-#define MODEL_VASE (1)
+#define MODEL_BOID_INTER (1)
+#define MODEL_VASE (2)
 
 #define VAO_BOID (0)
 #define VAO_VASE (1)
@@ -45,7 +47,10 @@ void DemoBoids::initModels()
 
 	addResPath("models/");
 
-	m = objL.loadModel(getResFile("cone/cone.obj"));
+	m = objL.loadModel(getResFile("cone/boid_state_1.obj"));
+	m_sceneData->models.push_back(m);
+
+	m = objL.loadModel(getResFile("cone/boid_state_2.obj"));
 	m_sceneData->models.push_back(m);
 
 	m = objL.loadModel(getResFile("vase/vase.obj"));
@@ -57,7 +62,7 @@ void DemoBoids::initModels()
 void DemoBoids::initVAOs()
 {
 	VAO* vao = new VAO();
-	vao->createFromModel(m_sceneData->models[MODEL_BOID]);
+	vao->createFromModelInterpolated(m_sceneData->models[MODEL_BOID], m_sceneData->models[MODEL_BOID_INTER]);
 	m_sceneData->vaos.push_back(vao);
 
 	vao = new VAO();
@@ -128,6 +133,25 @@ void DemoBoids::render()
 	}
 
 #pragma region Boids
+	ss->m_activeShader = m_sceneData->shaderPrograms[SHADER_BOID];
+	ss->m_activeShader->enable();
+
+	static float counter = 0.0f;
+	static bool up = true;
+	float delta = SceneManager::GetInstance()->delta * 3.0f;
+	if (up)
+	{
+		counter += delta;
+		if (counter >= 1.0f) up = false;
+	}
+	else
+	{
+		counter -= delta;
+		if (counter <= 0.0f) up = true;
+	}
+
+	Uniform<float>::bind("VertexMix", ss->m_activeShader->m_programObject, counter);
+
 	for (unsigned int i = 0; i < this->boids.size(); i++)
 	{
 		ss->m_activeShader = m_sceneData->shaderPrograms[SHADER_BOID];
