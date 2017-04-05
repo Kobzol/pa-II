@@ -9,6 +9,7 @@
 #include "../cudamem.h"
 
 #include "boids.h"
+#include "path_group.h"
 #include "../opengl/sceneManager.h"
 #include "../opengl/demos/demo_boids.h"
 #include "../opengl/CoreHeaders/sceneGUI.h"
@@ -45,6 +46,11 @@ double boidsAlignmentNeighbourhood = 1.0f;
 double boidsMaxVelocity = 0.01f;
 double boidsViewAngle = 135.0f;
 
+static PathGroup pathGroup(0.5f, {
+	boidGoal,
+	glm::vec3(5.0f, 5.0f, 0.0f),
+	glm::vec3(0.0f, 0.0f, 5.0f)
+});
 static glm::vec3 flockCenter{ 0.0f, 0.0f, 0.0f };
 
 /// Test
@@ -286,6 +292,9 @@ static void copyTransformsFromCuda(DemoBoids* demo, CudaMemory<Boid>& boids, Cud
 	}
 
 	flockCenter /= cpuBoids.size();
+
+	pathGroup.update(flockCenter);
+	boidGoal = pathGroup.getCurrentTarget();
 }
 
 static FlockConfig update_config()

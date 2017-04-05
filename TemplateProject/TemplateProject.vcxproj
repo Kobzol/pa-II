@@ -31,6 +31,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="boids\boids.h" />
+    <ClInclude Include="boids\path_group.h" />
     <ClInclude Include="cudamem.h" />
     <ClInclude Include="cudautil.cuh" />
     <ClInclude Include="graphics\imageKernels.cuh" />
