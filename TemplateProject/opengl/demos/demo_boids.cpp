@@ -133,25 +133,6 @@ void DemoBoids::render()
 	}
 
 #pragma region Boids
-	ss->m_activeShader = m_sceneData->shaderPrograms[SHADER_BOID];
-	ss->m_activeShader->enable();
-
-	static float counter = 0.0f;
-	static bool up = true;
-	float delta = SceneManager::GetInstance()->delta * 3.0f;
-	if (up)
-	{
-		counter += delta;
-		if (counter >= 1.0f) up = false;
-	}
-	else
-	{
-		counter -= delta;
-		if (counter <= 0.0f) up = true;
-	}
-
-	Uniform<float>::bind("VertexMix", ss->m_activeShader->m_programObject, counter);
-
 	for (unsigned int i = 0; i < this->boids.size(); i++)
 	{
 		ss->m_activeShader = m_sceneData->shaderPrograms[SHADER_BOID];

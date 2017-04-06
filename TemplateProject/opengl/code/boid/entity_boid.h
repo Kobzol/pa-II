@@ -1,11 +1,18 @@
 #pragma once
 
+#include <random>
+#include <ctime>
+
 #include "../CoreHeaders/entity_OBJ.h"
 #include "../quad/vao_quad.h"
 #include "../quad/entity_view_angle.h"
 #include "../line/vao_line.h"
 #include "../line/entity_line.h"
 #include "../../../boids/boids.h"
+#include <sceneManager.h>
+
+static std::default_random_engine engine((unsigned int) time(nullptr));
+static std::normal_distribution<float> distribution(2.0f, 0.5f);
 
 class Entity_Boid : public Entity_OBJ
 {
@@ -46,18 +53,56 @@ private:
 	void drawViewAngle();
 	void drawLineAngles();
 
+	void updateWings();
+	void switchWingsDirection();
+
 	ShaderProgram* quadShader;
 	ShaderProgram* lineShader;
 
 	bool drawHelper = false;
 
+	float wingsSpeed = 3.0f;
+	float wingsState = 0.0f;
+	bool wingsUp = true;
+
 	ViewAngleEntity* viewAngleEntity;
 	std::vector<LineEntity*> lineEntities;
 };
 
+inline void Entity_Boid::updateWings()
+{
+	float delta = SceneManager::GetInstance()->delta * this->wingsSpeed;
+	if (this->wingsUp)
+	{
+		this->wingsState += delta;
+		if (this->wingsState >= 1.0f)
+		{
+			this->switchWingsDirection();
+		}
+	}
+	else
+	{
+		this->wingsState -= delta;
+		if (this->wingsState <= 0.0f)
+		{
+			this->switchWingsDirection();
+		}
+	}
+}
+inline void Entity_Boid::switchWingsDirection()
+{
+	this->wingsUp = !this->wingsUp;
+	this->wingsSpeed = glm::clamp(distribution(engine), 0.5f, 4.0f);
+}
+
 inline void Entity_Boid::draw(const unsigned int eid)
 {
 	if (!m_isInitialized) return;
+
+	this->updateWings();
+
+	SceneSetting* ss = SceneSetting::GetInstance();
+	Uniform<float>::bind("VertexMix", ss->m_activeShader->m_programObject, this->wingsState);
 
 	Entity_OBJ::draw(eid);
 
