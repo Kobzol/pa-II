@@ -22,7 +22,7 @@
 
 #include <cuda_gl_interop.h>
 
-#define BOID_COUNT (100)
+#define BOID_COUNT (500)
 #define THREADS_PER_BLOCK (256)
 
 #define USE_SHARED_MEM
@@ -363,6 +363,8 @@ static void boids_body(int argc, char** argv)
 	FlockConfig flockConfig = update_config();
 	CudaMemory<FlockConfig> flockConfigCuda(1, &flockConfig);
 
+	CudaTimer timer;
+
 	while (true)
 	{
 #ifdef VISUALIZE
@@ -370,7 +372,6 @@ static void boids_body(int argc, char** argv)
 #endif
 
 #ifdef SIMULATE
-		CudaTimer timer;
 		timer.start();
 		calculateAccelerations << <gridDim, blockDim >> > (cudaBoids.device(), cudaAccelerations.device(), BOID_COUNT, flockConfigCuda.device());
 		timer.stop_wait();

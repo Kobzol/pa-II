@@ -12,7 +12,7 @@
 #include <sceneManager.h>
 
 static std::default_random_engine engine((unsigned int) time(nullptr));
-static std::normal_distribution<float> distribution(2.0f, 0.5f);
+static std::normal_distribution<float> distribution(1.5f, 0.5f);
 
 class Entity_Boid : public Entity_OBJ
 {
@@ -61,7 +61,7 @@ private:
 
 	bool drawHelper = false;
 
-	float wingsSpeed = 3.0f;
+	float wingsSpeed = 1.5f;
 	float wingsState = 0.0f;
 	bool wingsUp = true;
 
@@ -88,11 +88,13 @@ inline void Entity_Boid::updateWings()
 			this->switchWingsDirection();
 		}
 	}
+
+	this->wingsState = glm::clamp(this->wingsState, 0.0f, 1.0f);
 }
 inline void Entity_Boid::switchWingsDirection()
 {
 	this->wingsUp = !this->wingsUp;
-	this->wingsSpeed = glm::clamp(distribution(engine), 0.5f, 4.0f);
+	this->wingsSpeed = glm::clamp(distribution(engine), 0.5f, 2.0f);
 }
 
 inline void Entity_Boid::draw(const unsigned int eid)
@@ -121,7 +123,6 @@ inline void Entity_Boid::drawViewAngle()
 
 	this->viewAngleEntity->draw();
 }
-
 inline void Entity_Boid::drawLineAngles()
 {
 	SceneSetting* ss = SceneSetting::GetInstance();

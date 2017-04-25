@@ -10,6 +10,8 @@ void cviko4();
 void cviko5();
 void cviko6();
 void cviko7(int argc, char** argv);
+void cviko10();
+void cviko11();
 
 void boids(int argc, char** argv);
 
@@ -20,6 +22,7 @@ int main(int argc, char *argv[])
 	initializeCUDA(deviceProp);
 
 	boids(argc, argv);
+	//cviko11();
 
 	//getchar();
 
